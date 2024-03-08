@@ -1154,3 +1154,50 @@ Tanks (Warriors and Druids) are assigned to subgroup 0, healers (Priests, Paladi
 
 Finally, we send a message to the group leader informing them that the subgroups have been assigned based on roles.
 
+## SetTargetIcon
+Sets the target icon of an object for the group. This is useful for marking targets for crowd control, or other purposes in a dungeon or raid setting.
+
+### Parameters
+* icon: number - The target icon to set (0-7)
+* target: number - The target object's GUID
+* setter: number - The GUID of the player who is setting the icon
+
+### Example Usage
+This example will set a target icon on the player's current target when they use the /targeticon command. The icon will be randomly selected from the available options.
+
+```typescript
+const iconChoices = [0, 1, 2, 3, 4, 5, 6, 7];
+
+const onChatCommand = (event: OnChatMessageEvent) => {
+    const [player, msg] = [event.GetPlayer(), event.GetMessage()];
+
+    if (msg === "!targeticon") {
+        const target = player.GetSelection();
+        if (target) {
+            const group = player.GetGroup();
+            if (group) {
+                const randomIcon = iconChoices[Math.floor(Math.random() * iconChoices.length)];
+                group.SetTargetIcon(randomIcon, target.GetGUID(), player.GetGUID());
+                player.SendBroadcastMessage(`You have marked ${target.GetName()} with icon ${randomIcon}.`);
+            } else {
+                player.SendBroadcastMessage("You are not in a group.");
+            }
+        } else {
+            player.SendBroadcastMessage("You have no target selected.");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_CHAT_MESSAGE, (event) => onChatCommand(event));
+```
+
+In this example:
+1. We define an array of available target icon numbers (0-7).
+2. When the player uses the "!targeticon" command, we retrieve their current target.
+3. If they have a target selected, we check if the player is in a group.
+4. If the player is in a group, we randomly select an icon number from the available choices.
+5. We then call the `SetTargetIcon` method on the player's group, passing in the randomly selected icon number, the target's GUID, and the player's GUID (to identify who set the icon).
+6. Finally, we send a message to the player confirming which icon was set on their target.
+
+This script provides a convenient way for players to quickly mark targets with icons while in a group, without needing to manually select an icon each time.
+

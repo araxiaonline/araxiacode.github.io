@@ -7,6 +7,7 @@
         - [Creature](./classes/Creature.md)
         - [GameObject](./classes/GameObject.md)
         - [Group](./classes/Group.md)
+        - [Player](./classes/Player.md)
     - Events        
     - Enums
     - Examples

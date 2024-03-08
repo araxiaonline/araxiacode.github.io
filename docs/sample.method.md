@@ -1,12 +1,14 @@
+# Player 
+
 ## AddComboPoints
 If the player is a rogue or druid, this method will add combo points to the player 
 based on the target and the count of combo points to add.
 
-Parameters
-* enemy: [Unit](./unit.md) - Unit to apply combo points to
-* count: number - The number of combo points to apply 
+Parameters <hr />
+* *enemy:* [Unit](./unit.md) - Unit to apply combo points to
+* *count:* number - The number of combo points to apply 
 
-#### Example Usage:  
+**Example:**  
 Simple script to start a rogue/druid with an advantage. 
 ```typescript
 const onPlayerEnter: player_event_on_enter_combat = (event: number, player: Player, enemy: Unit): void => {

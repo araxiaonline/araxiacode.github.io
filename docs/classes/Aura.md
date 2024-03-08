@@ -548,3 +548,56 @@ Finally, we send a message to the player using `SendBroadcastMessage` to let the
 
 If the aura was applied to someone else, we set the maximum duration of the aura to its normal value of 10 minutes.
 
+## SetStackAmount
+Change the stack amount of the aura on the unit. If the `amount` is greater than or equal to the current number of stacks, the aura's duration will be reset to the maximum duration.
+
+### Parameters
+- amount: number - The new stack amount for the aura.
+
+### Example Usage
+In this example, we'll create a script that increases the stack amount of a specific aura when a player kills a creature. If the stack amount reaches 10 or more, the aura's duration will be reset, and the player will receive a bonus reward.
+
+```typescript
+const AURA_ENTRY = 12345;
+const BONUS_ITEM_ENTRY = 67890;
+const BONUS_ITEM_COUNT = 5;
+
+const OnCreatureKill: creature_event_on_creature_death = (event: number, creature: Creature, killer: Unit): void => {
+    if (killer instanceof Player) {
+        const player = killer as Player;
+        const aura = player.GetAura(AURA_ENTRY);
+
+        if (aura) {
+            const currentStacks = aura.GetStackAmount();
+            const newStacks = currentStacks + 1;
+
+            aura.SetStackAmount(newStacks);
+
+            if (newStacks >= 10) {
+                player.AddItem(BONUS_ITEM_ENTRY, BONUS_ITEM_COUNT);
+                player.SendBroadcastMessage("Congratulations! You have reached 10 stacks and received a bonus reward!");
+            }
+        } else {
+            player.AddAura(AURA_ENTRY, player);
+        }
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_CREATURE_DEATH, (...args) => OnCreatureKill(...args));
+```
+
+In this script:
+1. We define constants for the aura entry, bonus item entry, and bonus item count.
+2. When a creature is killed by a player, we check if the killer is a Player instance.
+3. We retrieve the specific aura from the player using `GetAura()`.
+4. If the aura exists on the player:
+   - We get the current stack amount using `GetStackAmount()`.
+   - We calculate the new stack amount by adding 1 to the current stack amount.
+   - We update the aura's stack amount using `SetStackAmount()`.
+   - If the new stack amount is greater than or equal to 10:
+     - We add the bonus item to the player's inventory using `AddItem()`.
+     - We send a broadcast message to the player informing them of the bonus reward.
+5. If the aura doesn't exist on the player, we add the aura to the player using `AddAura()`.
+
+This script encourages players to hunt creatures and rewards them with a bonus item when they reach a certain number of stacks on the specific aura.
+

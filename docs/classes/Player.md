@@ -525,3 +525,452 @@ In this example:
 6. If the player does not have Atiesh, we send a message informing them they do not possess the item.
 7. Finally, we register the `OnLoginEquipAtiesh` function to the `PLAYER_EVENT_ON_LOGIN` event to check if the player can equip Atiesh when they log in.
 
+## CanFly
+Returns whether the player is able to fly or not. This is determined by the player's current location, form, and abilities.
+
+### Parameters
+None
+
+### Returns
+boolean - `true` if the player can currently fly, `false` otherwise.
+
+### Example Usage
+The following script demonstrates how to use the `CanFly()` method to check if a player is able to fly before performing a specific action. In this case, the script listens for the `PLAYER_EVENT_ON_COMMAND` event and checks if the player can fly when they use the `.fly` command. If the player can fly, it will toggle their flying state. If they cannot fly, it will send them a message indicating that they are unable to fly at their current location.
+
+```typescript
+const FLY_COMMAND = "fly";
+
+const OnPlayerCommand: player_event_on_command = (event: number, player: Player, command: string, chatHandler: ChatHandler): boolean => {
+    if (command === FLY_COMMAND) {
+        if (player.CanFly()) {
+            if (player.IsFlying()) {
+                player.SetFlying(false);
+                chatHandler.SendSysMessage("You have stopped flying.");
+            } else {
+                player.SetFlying(true);
+                chatHandler.SendSysMessage("You are now flying!");
+            }
+        } else {
+            chatHandler.SendSysMessage("You cannot fly here.");
+        }
+        return false;
+    }
+    return true;
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_COMMAND, (...args) => OnPlayerCommand(...args));
+```
+
+In this example, the script registers the `PLAYER_EVENT_ON_COMMAND` event and checks if the player used the `.fly` command. If they did, it proceeds to check if the player can fly using the `CanFly()` method.
+
+If `CanFly()` returns `true`, the script then checks the player's current flying state using `IsFlying()`. If the player is already flying, it will stop their flying state using `SetFlying(false)` and send them a message saying "You have stopped flying." If the player is not currently flying, it will set their flying state using `SetFlying(true)` and send them a message saying "You are now flying!"
+
+If `CanFly()` returns `false`, meaning the player is unable to fly at their current location, the script will send them a message saying "You cannot fly here."
+
+By using the `CanFly()` method, you can ensure that players are only able to toggle their flying state in appropriate locations, such as in outdoor areas where flying is permitted. This helps maintain game balance and prevents players from accessing unintended areas or exploiting game mechanics.
+
+## CanParry
+Returns a boolean value indicating whether the player can parry incoming attacks or not. This is determined by the player's class, level, and equipment.
+
+### Parameters
+None
+
+### Returns
+* boolean - Returns `true` if the player can parry attacks, `false` otherwise.
+
+### Example Usage
+In this example, we'll create a script that adjusts the player's parry chance based on their level and class.
+
+```typescript
+const adjustParryChance: player_event_on_update = (event: number, player: Player, diff: number) => {
+    const playerLevel = player.GetLevel();
+    const playerClass = player.GetClass();
+    let parryChanceBonus = 0;
+
+    if (playerClass === Classes.CLASS_WARRIOR || playerClass === Classes.CLASS_PALADIN || playerClass === Classes.CLASS_ROGUE) {
+        if (playerLevel >= 10 && playerLevel < 20) {
+            parryChanceBonus = 2;
+        } else if (playerLevel >= 20 && playerLevel < 30) {
+            parryChanceBonus = 4;
+        } else if (playerLevel >= 30) {
+            parryChanceBonus = 6;
+        }
+    }
+
+    if (player.CanParry()) {
+        const currentParryChance = player.GetFloatValue(PlayerFields.PLAYER_PARRY_PERCENTAGE);
+        const newParryChance = currentParryChance + parryChanceBonus;
+        player.SetFloatValue(PlayerFields.PLAYER_PARRY_PERCENTAGE, newParryChance);
+        player.SendMessage(`Your parry chance has been increased by ${parryChanceBonus}% based on your level and class.`);
+    } else {
+        player.SendMessage("Your class cannot parry attacks.");
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_UPDATE, (...args) => adjustParryChance(...args));
+```
+
+In this script:
+1. We define a function called `adjustParryChance` that takes the player and the time difference as arguments.
+2. We retrieve the player's level and class using the `GetLevel()` and `GetClass()` methods.
+3. We initialize a variable called `parryChanceBonus` to store the bonus parry chance percentage.
+4. We check if the player's class is Warrior, Paladin, or Rogue, and if so, we assign a parry chance bonus based on their level range.
+5. We use the `CanParry()` method to check if the player can parry attacks.
+6. If the player can parry, we retrieve their current parry chance percentage using `GetFloatValue(PlayerFields.PLAYER_PARRY_PERCENTAGE)`.
+7. We calculate the new parry chance by adding the `parryChanceBonus` to the current parry chance.
+8. We update the player's parry chance using `SetFloatValue(PlayerFields.PLAYER_PARRY_PERCENTAGE, newParryChance)`.
+9. We send a message to the player informing them about the increased parry chance.
+10. If the player cannot parry, we send a message indicating that their class cannot parry attacks.
+
+Finally, we register the `adjustParryChance` function to the `PLAYER_EVENT_ON_UPDATE` event using `RegisterPlayerEvent`.
+
+This script demonstrates how the `CanParry()` method can be used in combination with other player-related methods and events to create a more dynamic gameplay experience based on the player's class and level.
+
+## CanShareQuest
+This method checks if the player is able to share a quest with other players in a group.
+
+### Parameters
+* entryId: number - The ID of the quest to check if it can be shared.
+
+### Returns
+* boolean - Returns 'true' if the player can share the specified quest, 'false' otherwise.
+
+### Example Usage
+This example demonstrates how to use `CanShareQuest` to prevent players from joining a group if they have a specific quest that cannot be shared.
+
+```typescript
+const UNPARALLELED_POWER_QUEST_ID = 13373;
+
+const onGroupInvite: player_event_on_group_invite = (event: number, player: Player, groupGuid: number, inviterGuid: number): void => {
+    const inviter = GetPlayerByGUID(inviterGuid);
+
+    if (!inviter) {
+        return;
+    }
+
+    const questId = UNPARALLELED_POWER_QUEST_ID;
+
+    if (player.HasQuest(questId) && !player.CanShareQuest(questId)) {
+        player.SendBroadcastMessage(`You cannot join the group because you have the quest "${GetQuestNameById(questId)}" which cannot be shared.`);
+        inviter.SendBroadcastMessage(`${player.GetName()} cannot join the group because they have the quest "${GetQuestNameById(questId)}" which cannot be shared.`);
+        player.DeclineGroup();
+        return;
+    }
+
+    // Other group invite logic...
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_GROUP_INVITE, (...args) => onGroupInvite(...args));
+```
+
+In this example:
+1. We define a constant `UNPARALLELED_POWER_QUEST_ID` with the ID of the quest we want to check.
+2. In the `onGroupInvite` event, we first check if the inviter exists using `GetPlayerByGUID`.
+3. We store the quest ID in a variable `questId`.
+4. We check if the player has the quest using `HasQuest` and if they can share it using `CanShareQuest`.
+   - If the player has the quest and cannot share it:
+     - We send a message to the player informing them that they cannot join the group due to the unshared quest.
+     - We send a message to the inviter informing them that the player cannot join the group due to the unshared quest.
+     - We decline the group invitation for the player using `DeclineGroup`.
+     - We return to prevent further execution of the event.
+5. If the player can share the quest or doesn't have it, the event continues with other group invite logic.
+
+This example showcases how `CanShareQuest` can be used to enforce quest sharing restrictions when players attempt to join a group.
+
+## CanSpeak
+Returns a boolean value indicating whether the player can currently communicate through chat.
+
+### Parameters
+None
+
+### Returns
+boolean - Returns `true` if the player can speak in chat, `false` otherwise.
+
+### Example Usage
+This example demonstrates how to use the `CanSpeak` method to prevent players from using certain chat commands if they are muted or silenced.
+
+```typescript
+// Custom chat command
+const MY_CUSTOM_COMMAND = "mycmd";
+
+// Function to handle the chat command
+const handleChatCommand: player_event_on_chat = (event: number, player: Player, msg: string, type: number, lang: Language): void => {
+    // Check if the message starts with the custom command
+    if (msg.startsWith(MY_CUSTOM_COMMAND)) {
+        // Check if the player can speak
+        if (player.CanSpeak()) {
+            // Player can speak, process the command
+            // ...
+            // Example: Send a message to the player
+            player.SendBroadcastMessage("You used the custom command!");
+        } else {
+            // Player cannot speak, send an error message
+            player.SendBroadcastMessage("You are not allowed to use this command while muted or silenced.");
+        }
+    }
+};
+
+// Register the chat event handler
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_CHAT, (...args) => handleChatCommand(...args));
+```
+
+In this example:
+1. We define a custom chat command `MY_CUSTOM_COMMAND`.
+2. We create a function `handleChatCommand` to handle the chat event.
+3. Inside the function, we check if the chat message starts with the custom command.
+4. If it does, we use the `CanSpeak` method to check if the player can currently speak in chat.
+   - If the player can speak, we process the command and send a message to the player.
+   - If the player cannot speak (muted or silenced), we send an error message to the player.
+5. Finally, we register the `handleChatCommand` function to be called whenever the `PLAYER_EVENT_ON_CHAT` event is triggered.
+
+This example showcases how the `CanSpeak` method can be used to enforce chat restrictions and prevent muted or silenced players from using certain chat commands or features in the game.
+
+## CanTitanGrip
+Returns whether or not the player can use the Titan Grip ability. 
+
+### Returns
+boolean - Returns `true` if the player can use Titan Grip, `false` otherwise.
+
+### Example Usage
+Handling an event where a Warrior attempts to equip two two-handed weapons:
+```typescript
+const ItemEquip : player_event_on_equip_item = (event: number, player: Player, item: Item) => {
+    // Check if the player is a Warrior
+    if (player.GetClass() !== Classes.CLASS_WARRIOR) {
+        return;
+    }
+
+    // Check if the equipped item is a two-handed weapon
+    if (item.GetInventoryType() === InventoryType.INVTYPE_2HWEAPON) {
+        // Get the item in the player's offhand slot
+        const offhandItem = player.GetItemByPos(InventorySlot.INVENTORY_SLOT_BAG_0, EquipmentSlots.EQUIPMENT_SLOT_OFFHAND);
+
+        // If the player has a two-handed weapon equipped in their offhand and they can't Titan Grip
+        if (offhandItem && offhandItem.GetInventoryType() === InventoryType.INVTYPE_2HWEAPON && !player.CanTitanGrip()) {
+            // Send a message to the player
+            player.SendBroadcastMessage("You can't equip two two-handed weapons without the Titan Grip ability.");
+
+            // Remove the offhand weapon
+            player.RemoveItem(InventorySlot.INVENTORY_SLOT_BAG_0, EquipmentSlots.EQUIPMENT_SLOT_OFFHAND, true);
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_EQUIP_ITEM, (...args) => ItemEquip(...args));
+```
+
+In this example, when a player equips an item, we first check if the player is a Warrior. If they are, we then check if the equipped item is a two-handed weapon. If it is, we get the item in the player's offhand slot and check if it's also a two-handed weapon. If the player has a two-handed weapon in their offhand and they can't use Titan Grip (determined by calling `CanTitanGrip()`), we send them a message indicating that they can't equip two two-handed weapons without the Titan Grip ability, and we remove the offhand weapon.
+
+This script prevents Warriors from equipping two two-handed weapons unless they have the Titan Grip ability, providing a more authentic gameplay experience that adheres to the rules of the game.
+
+## CanUninviteFromGroup
+This method checks if the player has permission to uninvite other players from their current group. It takes into account factors such as the player's rank within the group and the group type (party or raid).
+
+### Parameters
+None
+
+### Returns
+boolean - Returns 'true' if the player has permission to uninvite others from the current group, 'false' otherwise.
+
+### Example Usage
+In this example, we create a command that allows a player to uninvite another player from their group, but only if they have the necessary permissions.
+
+```typescript
+// Define the command
+const GroupUninviteCommand: player_gossip_event = (event: number, player: Player, receiver: Creature, message: string) => {
+    // Check if the player is in a group
+    if (!player.IsInGroup()) {
+        player.SendBroadcastMessage("You are not in a group.");
+        return;
+    }
+
+    // Check if the player has permission to uninvite others
+    if (!player.CanUninviteFromGroup()) {
+        player.SendBroadcastMessage("You do not have permission to uninvite players from the group.");
+        return;
+    }
+
+    // Get the name of the player to uninvite from the command arguments
+    const targetName = message.trim();
+
+    // Find the target player by name
+    const target = Player.GetPlayer(targetName);
+
+    if (!target) {
+        player.SendBroadcastMessage(`Player '${targetName}' not found.`);
+        return;
+    }
+
+    // Check if the target player is in the same group as the uninviting player
+    if (!player.IsInSameGroupWith(target)) {
+        player.SendBroadcastMessage(`Player '${targetName}' is not in your group.`);
+        return;
+    }
+
+    // Uninvite the target player from the group
+    target.UninviteFromGroup();
+
+    // Send a message to the group
+    player.GetGroup().SendGroupMessage(`${target.GetName()} has been uninvited from the group by ${player.GetName()}.`);
+};
+
+// Register the command
+RegisterPlayerGossipEvent(100, (...args) => GroupUninviteCommand(...args));
+```
+
+In this script:
+1. We first check if the player is actually in a group using `IsInGroup()`.
+2. We then check if the player has permission to uninvite others using `CanUninviteFromGroup()`.
+3. We get the name of the player to uninvite from the command arguments.
+4. We attempt to find the target player by name using `Player.GetPlayer()`.
+5. We check if the target player is in the same group as the uninviting player using `IsInSameGroupWith()`.
+6. If all checks pass, we uninvite the target player from the group using `UninviteFromGroup()`.
+7. Finally, we send a message to the group informing them of the uninvite action.
+
+This script demonstrates how `CanUninviteFromGroup()` can be used in combination with other group-related methods to implement group management functionality in a mod.
+
+## CanUseItem
+Determines if the player can use a specific item or item entry. This method checks for class, level, skill, and other requirements.
+
+### Parameters
+* item: [Item](./item.md) - The item to check if the player can use
+* entry: number - The item entry to check if the player can use
+
+### Returns
+* boolean - Returns 'true' if the player can use the item or item entry, 'false' otherwise.
+
+### Example Usage
+Prevent warriors from using wands and create a custom message:
+```typescript
+const WAND_ITEM_CLASS = 2;
+const WAND_ITEM_SUBCLASS = 19;
+const WARRIOR_CLASS_MASK = 1;
+
+const OnUseItemStart: player_event_on_use_item = (event, player, item, cast) => {
+    if (player.GetClassMask() & WARRIOR_CLASS_MASK) {
+        const itemClass = item.GetClass();
+        const itemSubClass = item.GetSubClass();
+
+        if (itemClass == WAND_ITEM_CLASS && itemSubClass == WAND_ITEM_SUBCLASS) {
+            if (!player.CanUseItem(item)) {
+                player.SendBroadcastMessage("Warriors cannot use wands.");
+                player.SendEquipError(InventoryResult.EQUIP_ERR_CANT_DO_RIGHT_NOW, item);
+                return false;
+            }
+        }
+    }
+    return true;
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_USE_ITEM, OnUseItemStart);
+```
+In this example, when a warrior tries to use a wand, the script checks if the player can use the item using the `CanUseItem` method. If the player cannot use the item, it sends a custom broadcast message to the player, sends the appropriate equip error message, and prevents the item usage by returning false.
+
+You can also use the `CanUseItem` method with an item entry:
+```typescript
+const ITEM_ENTRY_DARK_PORTAL = 184871;
+const ITEM_ENTRY_MEDIVH_JOURNAL = 184875;
+
+const OnLoginCheckItems: player_event_on_login = (event, player) => {
+    if (!player.CanUseItem(null, ITEM_ENTRY_DARK_PORTAL)) {
+        player.AddItem(ITEM_ENTRY_MEDIVH_JOURNAL);
+        player.SendBroadcastMessage("You found Medivh's Journal, which may help you to use the Dark Portal.");
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, OnLoginCheckItems);
+```
+In this example, when a player logs in, the script checks if the player can use the Dark Portal item using the `CanUseItem` method with the item entry. If the player cannot use the Dark Portal, the script adds Medivh's Journal to the player's inventory and sends a broadcast message hinting that the journal may help them use the Dark Portal.
+
+## ClearComboPoints
+Clears the player's combo points. This is useful for situations where you want to remove any existing combo points from the player, such as when they change targets or leave combat.
+
+### Parameters
+None
+
+### Returns
+None
+
+### Example Usage
+In this example, we'll create a script that clears the player's combo points when they leave combat. This ensures that the player starts fresh with zero combo points when entering a new combat encounter.
+
+```typescript
+const onLeaveCombat: player_event_on_leave_combat = (event: number, player: Player) => {
+    // Clear the player's combo points when leaving combat
+    player.ClearComboPoints();
+
+    // Notify the player that their combo points have been reset
+    player.SendBroadcastMessage("Your combo points have been reset.");
+
+    // You can also perform additional actions here, such as resetting other player states or buffs
+    // For example, you might want to remove a stealth buff if the player is a rogue
+    if (player.GetClass() == Classes.CLASS_ROGUE) {
+        player.RemoveAura(1784); // Stealth spell ID
+    }
+
+    // Or, you could apply a "well rested" buff if the player is in an inn or city
+    if (player.IsInCity() || player.IsInInn()) {
+        player.AddAura(20591, player); // Restful Sleep spell ID
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LEAVE_COMBAT, (...args) => onLeaveCombat(...args));
+```
+
+In this script, we register the `onLeaveCombat` callback function to be triggered whenever the player leaves combat. Inside the callback, we perform the following actions:
+
+1. Clear the player's combo points using `player.ClearComboPoints()`.
+2. Send a broadcast message to the player informing them that their combo points have been reset.
+3. Check if the player is a rogue using `player.GetClass()` and compare it with the `Classes.CLASS_ROGUE` constant. If the player is a rogue, we remove the stealth buff using `player.RemoveAura(1784)`, where `1784` is the spell ID for stealth.
+4. Check if the player is in a city or inn using `player.IsInCity()` or `player.IsInInn()`. If the player is in either of these locations, we apply the "Restful Sleep" buff using `player.AddAura(20591, player)`, where `20591` is the spell ID for the buff.
+
+This example demonstrates how you can use the `ClearComboPoints` method in combination with other player-related methods and game events to create more complex and immersive gameplay experiences. By resetting the player's combo points when leaving combat and performing additional actions based on their class and location, you can provide a more dynamic and personalized experience for each player.
+
+## ClearHonorInfo
+This method clears all the weekly honor status for the player, resetting their honor points, kills, and other related statistics. This can be useful for implementing custom PvP systems or resetting player progress on a weekly basis.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+This method does not return any value.
+
+### Example Usage:
+In this example, we'll create a script that resets all online players' weekly honor status every Sunday at midnight.
+
+```typescript
+// Function to reset weekly honor status for all online players
+function ResetWeeklyHonor() {
+    const players = GetPlayersInWorld();
+    for (const player of players) {
+        player.ClearHonorInfo();
+        player.SendBroadcastMessage("Your weekly honor status has been reset.");
+    }
+}
+
+// Function to check if it's Sunday at midnight
+function IsSundayMidnight() {
+    const now = new Date();
+    return now.getDay() === 0 && now.getHours() === 0 && now.getMinutes() === 0;
+}
+
+// Register a server event to check for Sunday midnight every minute
+RegisterServerEvent(ServerEvents.SERVER_EVENT_ON_UPDATE, () => {
+    if (IsSundayMidnight()) {
+        ResetWeeklyHonor();
+    }
+});
+```
+
+In this script:
+
+1. We define a function called `ResetWeeklyHonor` that retrieves all online players using `GetPlayersInWorld()`, then iterates through each player and calls the `ClearHonorInfo()` method to reset their weekly honor status. We also send a broadcast message to each player informing them of the reset.
+
+2. We define a helper function called `IsSundayMidnight` that checks if the current date and time is Sunday at midnight (00:00).
+
+3. We register a server event using `RegisterServerEvent` with the event type `ServerEvents.SERVER_EVENT_ON_UPDATE`. This event is triggered every server update tick (usually every few milliseconds).
+
+4. Inside the event callback, we check if it's Sunday at midnight using the `IsSundayMidnight` function. If it is, we call the `ResetWeeklyHonor` function to reset the weekly honor status for all online players.
+
+With this script in place, the server will automatically reset the weekly honor status for all online players every Sunday at midnight, providing a consistent and automated way to manage player progress in a custom PvP system.
+

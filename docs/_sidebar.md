@@ -3,8 +3,10 @@
     - Getting Started
     - Configuration    
     - Eluna Classes
+        - [BattleGround](./classes/BattleGround.md)
         - [Creature](./classes/Creature.md)
         - [GameObject](./classes/GameObject.md)
+        - [Group](./classes/Group.md)
     - Events        
     - Enums
     - Examples

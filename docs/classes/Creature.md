@@ -2528,3 +2528,2068 @@ In this example:
 
 This script ensures that the boss respects the category cooldown and doesn't spam the powerful ability too frequently.
 
+## HasLootMode
+This method checks if the creature has a specific loot mode enabled. Loot modes determine how the creature's loot is generated and can be used to create different loot tables for the same creature under different conditions.
+
+### Parameters
+* lootMode: number - The loot mode to check for. Valid loot modes are defined in the `LOOT_MODE_*` constants in the [LootModes](./lootmodes.md) enumeration.
+
+### Returns
+* boolean - Returns `true` if the creature has the specified loot mode enabled, `false` otherwise.
+
+### Example Usage
+In this example, we'll create a script that modifies the loot of a specific creature based on the number of players in the group. If the group size is 5 or more, we'll enable the `LOOT_MODE_HARD_MODE_2` loot mode for the creature, which could drop additional or different items.
+
+```typescript
+const CREATURE_ENTRY = 30000;
+const LOOT_MODE_HARD_MODE_2 = 4;
+
+const OnCreatureKill: map_event_on_creature_kill = (event: number, creature: Creature, killer: Unit) => {
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        const players = creature.GetMap().GetPlayers();
+        const groupSize = players.length;
+
+        if (groupSize >= 5) {
+            if (!creature.HasLootMode(LOOT_MODE_HARD_MODE_2)) {
+                creature.AddLootMode(LOOT_MODE_HARD_MODE_2);
+                creature.SendChatMessage(CHAT_MSG_MONSTER_YELL, LANG_UNIVERSAL, "You have proven your strength, now face the true challenge!");
+            }
+        } else {
+            if (creature.HasLootMode(LOOT_MODE_HARD_MODE_2)) {
+                creature.RemoveLootMode(LOOT_MODE_HARD_MODE_2);
+                creature.SendChatMessage(CHAT_MSG_MONSTER_SAY, LANG_UNIVERSAL, "You are not worthy of the ultimate reward.");
+            }
+        }
+    }
+};
+
+RegisterMapEvent(MapEvents.MAP_EVENT_ON_CREATURE_KILL, (...args) => OnCreatureKill(...args));
+```
+
+In this script:
+1. We define the creature entry and the desired loot mode constant.
+2. When a creature is killed, we check if it matches the specific entry we're interested in.
+3. We get the list of players in the map and count the group size.
+4. If the group size is 5 or more and the creature doesn't already have the `LOOT_MODE_HARD_MODE_2` enabled, we add this loot mode and make the creature yell a challenging message.
+5. If the group size is less than 5 and the creature has the `LOOT_MODE_HARD_MODE_2` enabled, we remove this loot mode and make the creature say a dismissive message.
+
+This script showcases how to use the `HasLootMode` method to check for a specific loot mode and modify the creature's loot table based on certain conditions.
+
+## HasLootRecipient
+This method checks if the creature has a loot recipient assigned. It will return true if the creature's loot will be given to a player or group, and false if no loot recipient is assigned.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+boolean - Returns `true` if the creature has a loot recipient (player or group) assigned, `false` otherwise.
+
+### Example Usage
+This example script listens for the `CREATURE_EVENT_ON_DIED` event and checks if the creature has a loot recipient. If it does, it broadcasts a message to the creature's loot recipient (player or group) indicating that they will receive loot. If no loot recipient is assigned, it broadcasts a message to nearby players that the loot is free for anyone to take.
+
+```typescript
+const onCreatureDeath: creature_event_on_died = (event: number, creature: Creature, killer: Unit) => {
+    const creatureName = creature.GetName();
+    
+    if (creature.HasLootRecipient()) {
+        const lootRecipient = creature.GetLootRecipient();
+        
+        if (lootRecipient instanceof Player) {
+            lootRecipient.SendBroadcastMessage(`You will receive loot from ${creatureName}'s corpse.`);
+        } else if (lootRecipient instanceof Group) {
+            lootRecipient.SendGroupMessage(`Your group will receive loot from ${creatureName}'s corpse.`);
+        }
+    } else {
+        const nearbyPlayers = creature.GetPlayersInRadius(30);
+        
+        nearbyPlayers.forEach((player: Player) => {
+            player.SendBroadcastMessage(`${creatureName}'s corpse has no loot recipient. The loot is free for anyone to take!`);
+        });
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_DIED, (...args) => onCreatureDeath(...args));
+```
+
+In this example:
+1. When a creature dies, the script checks if it has a loot recipient using the `HasLootRecipient()` method.
+2. If a loot recipient is assigned, it determines whether the recipient is a player or a group using the `GetLootRecipient()` method.
+   - If the recipient is a player, it sends a broadcast message to that player indicating they will receive loot from the creature's corpse.
+   - If the recipient is a group, it sends a group message to all members indicating the group will receive loot from the creature's corpse.
+3. If no loot recipient is assigned, it retrieves nearby players within a 30-yard radius using the `GetPlayersInRadius()` method.
+   - It then sends a broadcast message to each nearby player, informing them that the creature's corpse has no loot recipient and the loot is free for anyone to take.
+
+This script helps inform players about the loot distribution when a creature dies, based on whether a loot recipient is assigned or not.
+
+## HasQuest
+Determines if the creature has the specified quest available for players to start.
+
+### Parameters
+* questId: number - The ID of the quest to check.
+
+### Returns
+* boolean - Returns `true` if the creature has the quest, `false` otherwise.
+
+### Example Usage
+Check if a creature has a specific quest available and display a message to the player.
+```typescript
+const CREATURE_ENTRY = 1234;
+const QUEST_ID = 5678;
+
+const OnGossipHello: player_event_on_gossip_hello = (event: number, player: Player, creature: Creature) => {
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        if (creature.HasQuest(QUEST_ID)) {
+            creature.SendUnitWhisper("Greetings, adventurer! I have an important quest for you.", player);
+            creature.SendUnitWhisper("Speak with me to learn more about the task at hand.", player);
+        } else {
+            creature.SendUnitWhisper("I'm sorry, but I don't have any quests available for you at the moment.", player);
+            creature.SendUnitWhisper("Please check back with me later, as I may have new opportunities in the future.", player);
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_GOSSIP_HELLO, (...args) => OnGossipHello(...args));
+```
+In this example:
+1. We define the entry ID of the creature and the ID of the quest we want to check.
+2. In the `OnGossipHello` event handler, we check if the creature interacted with has the specified entry ID.
+3. If the creature has the desired entry ID, we use the `HasQuest` method to determine if the creature has the specified quest available.
+4. If the creature has the quest, we send whisper messages to the player indicating that the creature has an important quest for them and encourages them to speak with the creature to learn more.
+5. If the creature does not have the quest, we send whisper messages to the player apologizing and informing them that the creature doesn't have any quests available at the moment, and suggests checking back later for new opportunities.
+6. Finally, we register the `OnGossipHello` event handler using `RegisterPlayerEvent` to handle the player's interaction with the creature.
+
+This example demonstrates how to use the `HasQuest` method to check if a specific creature has a particular quest available, and provides a more immersive experience for the player by sending appropriate whisper messages based on the quest availability.
+
+## HasSearchedAssistance
+Returns a boolean value indicating whether the creature has already searched for combat assistance.
+
+### Parameters
+None
+
+### Returns
+boolean - `true` if the creature has already searched for combat assistance, `false` otherwise.
+
+### Example Usage
+In this example, we'll create a script that checks if a creature has searched for assistance and if not, it will search for nearby friendly creatures to assist in combat.
+
+```typescript
+const FRIENDLY_CREATURE_ENTRY = 1234;
+const SEARCH_RADIUS = 20;
+
+const onCreatureEnterCombat: creature_event_on_enter_combat = (event: number, creature: Creature, target: Unit): void => {
+    if (!creature.HasSearchedAssistance()) {
+        const nearbyCreatures = creature.GetCreaturesInRange(SEARCH_RADIUS, FRIENDLY_CREATURE_ENTRY);
+
+        if (nearbyCreatures.length > 0) {
+            creature.SendChatMessage(ChatMsg.CHAT_MSG_MONSTER_SAY, 0, "Calling for help!");
+
+            nearbyCreatures.forEach((friendly: Creature) => {
+                if (!friendly.IsInCombat()) {
+                    friendly.SetTarget(target);
+                    friendly.EnterCombat(target);
+                }
+            });
+        } else {
+            creature.SendChatMessage(ChatMsg.CHAT_MSG_MONSTER_SAY, 0, "No allies nearby. I must fight alone!");
+        }
+    } else {
+        creature.SendChatMessage(ChatMsg.CHAT_MSG_MONSTER_SAY, 0, "I've already called for assistance. Time to focus on the battle!");
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_ENTER_COMBAT, (...args) => onCreatureEnterCombat(...args));
+```
+
+In this script:
+1. We define constants for the friendly creature entry ID and the search radius.
+2. When the creature enters combat, we check if it has already searched for assistance using the `HasSearchedAssistance()` method.
+3. If the creature hasn't searched for assistance yet:
+   - We use `GetCreaturesInRange()` to find nearby friendly creatures within the specified search radius.
+   - If friendly creatures are found, the creature sends a chat message indicating it's calling for help.
+   - We iterate over the nearby friendly creatures and set their target to the current target if they're not already in combat, effectively bringing them into the fight.
+   - If no allies are found, the creature sends a chat message stating it must fight alone.
+4. If the creature has already searched for assistance, it sends a chat message indicating it has already called for help and must focus on the battle.
+
+This script demonstrates how to use the `HasSearchedAssistance()` method to prevent the creature from repeatedly searching for assistance during combat. It also showcases how to find nearby friendly creatures and bring them into the fight if the creature hasn't already searched for assistance.
+
+## HasSpell
+
+Determines if the creature has the specified spell in its spell list and can cast it while mind-controlled.
+
+### Parameters
+- `spellId`: number - The ID of the spell to check.
+
+### Returns
+- boolean - Returns `true` if the creature has the spell and can cast it while mind-controlled, `false` otherwise.
+
+### Example Usage
+
+In this example, we'll create a script that checks if a creature has a specific spell and can cast it while mind-controlled. If the creature has the spell, it will be mind-controlled and forced to cast the spell on a random player within range.
+
+```typescript
+const CREATURE_ENTRY = 1234; // Replace with the desired creature entry ID
+const SPELL_ID = 5678; // Replace with the ID of the spell to check and cast
+
+const MindControlCreature: player_event_on_gossip_hello = (event: number, player: Player, creature: Creature) => {
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        if (creature.HasSpell(SPELL_ID)) {
+            // Get all players within a certain range of the creature
+            const nearbyPlayers = creature.GetPlayersInRange(30);
+
+            if (nearbyPlayers.length > 0) {
+                // Select a random player from the nearby players
+                const randomPlayer = nearbyPlayers[Math.floor(Math.random() * nearbyPlayers.length)];
+
+                // Mind control the creature
+                creature.SetFaction(35); // Set the creature's faction to friendly
+                creature.SetCharmerGUID(player.GetGUID());
+                creature.SetOwnerGUID(player.GetGUID());
+
+                // Force the creature to cast the spell on the random player
+                creature.CastSpell(randomPlayer, SPELL_ID, true);
+
+                // After a short delay, remove the mind control
+                creature.RegisterEvent((): void => {
+                    creature.RemoveCharmer();
+                    creature.SetOwnerGUID(0);
+                    creature.SetFaction(creature.GetDefaultFaction());
+                }, 5000, 1);
+
+                player.SendBroadcastMessage(`You have mind-controlled the creature and forced it to cast spell ${SPELL_ID} on ${randomPlayer.GetName()}!`);
+            } else {
+                player.SendBroadcastMessage("There are no nearby players to target with the spell.");
+            }
+        } else {
+            player.SendBroadcastMessage("The creature does not have the specified spell.");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_GOSSIP_HELLO, (...args) => MindControlCreature(...args));
+```
+
+In this script:
+1. We define the creature entry ID and the spell ID that we want to check and cast.
+2. When a player interacts with the creature via gossip, the script checks if the creature has the specified spell using `HasSpell()`.
+3. If the creature has the spell, it retrieves all players within a 30-yard range using `GetPlayersInRange()`.
+4. If there are nearby players, it selects a random player from the list.
+5. The creature is then mind-controlled by setting its faction, charmer GUID, and owner GUID.
+6. The creature is forced to cast the spell on the randomly selected player using `CastSpell()`.
+7. After a short delay of 5 seconds, the mind control is removed by resetting the creature's faction, charmer, and owner.
+8. The player receives a message indicating the success of the mind control and the target player.
+9. If there are no nearby players or the creature doesn't have the specified spell, appropriate messages are sent to the player.
+
+This script showcases the usage of `HasSpell()` to check if a creature has a specific spell and can cast it while mind-controlled, along with additional functionality to mind control the creature and force it to cast the spell on a random nearby player.
+
+## HasSpellCooldown
+Returns a boolean value indicating whether the specified spell is currently on cooldown for the creature.
+
+### Parameters
+* spellId: number - The ID of the spell to check for cooldown.
+
+### Returns
+* boolean - Returns `true` if the spell is on cooldown, `false` otherwise.
+
+### Example Usage
+In this example, we create a script that checks if a creature has a specific spell on cooldown before casting it. If the spell is not on cooldown, the creature will cast the spell on its current target.
+
+```typescript
+const CREATURE_ENTRY = 1234;
+const SPELL_ID = 5678;
+
+const CreatureUpdate: creature_event_on_update = (event: number, creature: Creature, diff: number) => {
+    if (!creature.IsCombat() || !creature.IsAlive()) {
+        return;
+    }
+
+    const target = creature.GetVictim();
+    if (!target) {
+        return;
+    }
+
+    if (creature.HasSpellCooldown(SPELL_ID)) {
+        // Spell is on cooldown, do not cast
+        return;
+    }
+
+    // Spell is not on cooldown, cast it on the target
+    creature.CastSpell(target, SPELL_ID, false);
+
+    // Put the spell on cooldown
+    const cooldownTime = 5000; // 5 seconds cooldown
+    creature.AddCreatureSpellCooldown(SPELL_ID, cooldownTime);
+};
+
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_UPDATE, (...args) => CreatureUpdate(...args));
+```
+
+In this script, we first check if the creature is in combat and alive. If either condition is not met, we return early. 
+
+Next, we get the creature's current target using `GetVictim()`. If there is no target, we return early.
+
+We then use the `HasSpellCooldown()` method to check if the specified spell (`SPELL_ID`) is currently on cooldown for the creature. If the spell is on cooldown, we return early without casting the spell.
+
+If the spell is not on cooldown, we proceed to cast the spell on the target using `CastSpell()`. We pass `false` as the third argument to indicate that this is not a triggered spell cast.
+
+After casting the spell, we put it on cooldown using `AddCreatureSpellCooldown()`. We specify the spell ID and the cooldown time in milliseconds (5 seconds in this example).
+
+Finally, we register the script to the creature's `CREATURE_EVENT_ON_UPDATE` event using `RegisterCreatureEvent()`.
+
+This script ensures that the creature only casts the specified spell when it is off cooldown, preventing excessive or rapid spell casting.
+
+## IsBotTank
+Returns true if the creature is flagged as a tank role in the database.  This is commonly used to check if a creature should be tanking or not.
+
+### Parameters
+None
+
+### Returns
+boolean - True if the creature is flagged as a tank role in the database, false otherwise.
+
+### Example Usage
+This example demonstrates how to use the `IsBotTank()` method to determine if a creature should be tanking or not. In this example, we have a custom AI script for a creature that checks if it should be tanking based on its role in the database. If the creature is flagged as a tank, it will cast a taunt spell on its target to maintain aggro.
+
+```typescript
+const TAUNT_SPELL_ID = 355;
+
+const onAiUpdate: creature_event_on_ai_update = (event: number, creature: Creature, diff: number): void => {
+    if (!creature.IsInCombat()) {
+        return;
+    }
+
+    const target = creature.GetVictim();
+    if (!target) {
+        return;
+    }
+
+    if (creature.IsBotTank()) {
+        const tauntSpell = creature.GetSpellInfo(TAUNT_SPELL_ID);
+        if (tauntSpell && creature.CanCast(tauntSpell)) {
+            creature.CastSpell(target, TAUNT_SPELL_ID, true);
+        }
+    }
+
+    // Continue with other AI logic...
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_AI_UPDATE, (...args) => onAiUpdate(...args));
+```
+
+In this example, we first check if the creature is in combat using the `IsInCombat()` method. If the creature is not in combat, we return early since there's no need to perform any tanking logic.
+
+Next, we get the creature's current target using the `GetVictim()` method. If the creature doesn't have a target, we return early as well.
+
+We then use the `IsBotTank()` method to check if the creature is flagged as a tank role in the database. If it is, we proceed with the tanking logic.
+
+Inside the tanking logic, we first retrieve the taunt spell information using the `GetSpellInfo()` method and the spell ID for the taunt spell (in this case, 355). We then check if the creature can cast the taunt spell using the `CanCast()` method. If both conditions are met, we cast the taunt spell on the creature's target using the `CastSpell()` method with the `triggered` parameter set to `true` to bypass any casting time or cooldown.
+
+After the tanking logic, you can continue with any other AI logic specific to your creature's behavior.
+
+This example showcases how the `IsBotTank()` method can be used in conjunction with other methods and game logic to create a custom AI script for a creature that handles tanking responsibilities based on its designated role.
+
+## IsBotOffTank
+Returns true if the creature is an active bot and is assigned the off-tank role in a group or raid. Off-tanks are typically responsible for picking up additional enemies in an encounter and helping the main tank mitigate damage.
+
+### Parameters
+None
+
+### Returns
+boolean - true if the creature is an active bot and assigned as an off-tank, false otherwise.
+
+### Example Usage
+```typescript
+const BotPartyBalancer: player_event_on_update = (event: number, player: Player, diff: number) => {
+    const maxGroupSize = 5;
+    const minTanks = 1; 
+    const minHealers = 1;
+    const minRangedDps = 1; 
+    const minMeleeDps = 1;
+
+    // Get all nearby creatures in a 20 yard radius
+    const nearbyCreatures = player.GetCreaturesInRange(20);
+
+    let tanks = 0;
+    let healers = 0; 
+    let rangedDps = 0;
+    let meleeDps = 0;
+
+    // Iterate through each creature and increment role variables
+    nearbyCreatures.forEach((creature: Creature) => {
+        if (creature.IsInRaidWith(player) || creature.IsInGroupWith(player)) {
+            if (creature.IsBotOffTank()) 
+                tanks++;
+            else if (creature.IsBotHealer())
+                healers++;
+            else if (creature.IsBotRangedDps())
+                rangedDps++;
+            else if (creature.IsBotMeleeDps()) 
+                meleeDps++;
+        }
+    });
+
+    // Check if the group composition is valid
+    if (tanks < minTanks || healers < minHealers || rangedDps < minRangedDps || meleeDps < minMeleeDps) {
+        player.SendBroadcastMessage("Invalid bot party composition. Attempting to rebalance...");
+
+        // Attempt to invite additional bots to fill missing roles
+        // Implementation details omitted for brevity
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_UPDATE, (...args) => BotPartyBalancer(...args));
+```
+In this example, we define a player event handler that triggers periodically to check the composition of the player's group or raid. It iterates through all nearby creatures, checks if they are in the player's group or raid, and increments role-specific variables based on the creature's assigned role using the `IsBotOffTank()`, `IsBotHealer()`, `IsBotRangedDps()`, and `IsBotMeleeDps()` methods.
+
+If the group composition does not meet the minimum requirements for each role (defined by `minTanks`, `minHealers`, `minRangedDps`, and `minMeleeDps`), it sends a broadcast message to the player indicating an invalid composition and attempts to invite additional bots to fill the missing roles.
+
+This example demonstrates how the `IsBotOffTank()` method can be used in conjunction with other role-checking methods to ensure a balanced party composition when using bot creatures in a group or raid setting.
+
+## IsCivilian
+The `IsCivilian` method checks if the creature is a civilian NPC or not. Civilian NPCs are usually non-combat NPCs that can be found in cities and towns, such as vendors, quest givers, and other interactive NPCs.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+- `boolean` - Returns `true` if the creature is a civilian NPC, `false` otherwise.
+
+### Example Usage
+In this example, we'll create a script that checks if a creature is a civilian NPC and performs different actions based on the result.
+
+```typescript
+const CIVILIAN_NPC_ENTRY = 1234; // Replace with the actual civilian NPC entry ID
+
+const OnCreatureKill: creature_event_on_creature_kill = (event: number, killer: Unit, killed: Creature) => {
+    if (killed.GetEntry() === CIVILIAN_NPC_ENTRY) {
+        if (killed.IsCivilian()) {
+            // The killed creature is a civilian NPC
+            if (killer instanceof Player) {
+                // The killer is a player
+                const player = killer as Player;
+                player.SendBroadcastMessage("You have killed a civilian NPC! Your reputation with the city has decreased.");
+                
+                // Reduce the player's reputation with the city faction
+                const CITY_FACTION_ID = 123; // Replace with the actual city faction ID
+                const REPUTATION_LOSS = 500; // Amount of reputation to lose
+                player.ModifyFactionReputation(CITY_FACTION_ID, -REPUTATION_LOSS);
+                
+                // Apply a debuff to the player for killing a civilian
+                const DEBUFF_SPELL_ID = 4321; // Replace with the actual debuff spell ID
+                player.AddAura(DEBUFF_SPELL_ID, player);
+            }
+        } else {
+            // The killed creature is not a civilian NPC
+            if (killer instanceof Player) {
+                const player = killer as Player;
+                player.SendBroadcastMessage("You have killed a hostile NPC. Well done!");
+                
+                // Reward the player with experience points and gold
+                const EXPERIENCE_REWARD = 1000; // Amount of experience points to reward
+                const GOLD_REWARD = 50; // Amount of gold to reward
+                player.GiveXP(EXPERIENCE_REWARD);
+                player.ModifyMoney(GOLD_REWARD);
+            }
+        }
+    }
+};
+
+RegisterCreatureEvent(CIVILIAN_NPC_ENTRY, CreatureEvents.CREATURE_EVENT_ON_CREATURE_KILL, OnCreatureKill);
+```
+
+In this example:
+1. We define the entry ID of the civilian NPC we want to check.
+2. We register a creature event handler for the `CREATURE_EVENT_ON_CREATURE_KILL` event.
+3. When a creature is killed, we check if its entry ID matches the civilian NPC entry.
+4. If the killed creature is a civilian NPC (determined by `IsCivilian()`), we perform the following actions:
+   - If the killer is a player, we send them a broadcast message indicating they killed a civilian NPC.
+   - We reduce the player's reputation with the city faction using `ModifyFactionReputation()`.
+   - We apply a debuff to the player using `AddAura()` as a penalty for killing a civilian.
+5. If the killed creature is not a civilian NPC, we perform different actions:
+   - If the killer is a player, we send them a broadcast message indicating they killed a hostile NPC.
+   - We reward the player with experience points using `GiveXP()` and gold using `ModifyMoney()`.
+
+This example demonstrates how the `IsCivilian()` method can be used to differentiate between civilian and non-civilian NPCs, allowing for different actions and consequences based on the NPC type.
+
+## IsDamageEnoughForLootingAndReward
+
+Checks if the creature has taken enough damage to be looted and grant rewards to players.
+
+### Returns
+
+boolean - Returns true if the creature is damaged enough for looting and rewards, false otherwise.
+
+### Example Usage
+
+This example demonstrates how to use the `IsDamageEnoughForLootingAndReward` method to determine if a creature should drop loot and grant rewards upon death.
+
+```typescript
+const CREATURE_ENTRY = 1234;
+const SPECIAL_ITEM_ENTRY = 5678;
+const SPECIAL_ITEM_DROP_CHANCE = 10;
+
+const onCreatureDeath: creature_event_on_just_died = (event: number, creature: Creature, killer: Unit) => {
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        if (creature.IsDamageEnoughForLootingAndReward()) {
+            // Create a loot table for the creature
+            const lootTable = creature.GetLootRecipient().GetLoot();
+
+            // Add a special item to the loot table with a specific drop chance
+            lootTable.AddItem(SPECIAL_ITEM_ENTRY, 1, SPECIAL_ITEM_DROP_CHANCE);
+
+            // Generate the loot for the creature
+            creature.GenerateLoot();
+
+            // Grant rewards to the players who participated in the kill
+            const nearbyPlayers = creature.GetPlayersInRange(50);
+            for (const player of nearbyPlayers) {
+                if (player.IsInGroup()) {
+                    const groupMembers = player.GetGroup().GetMembers();
+                    for (const member of groupMembers) {
+                        member.AddItem(SPECIAL_ITEM_ENTRY, 1);
+                    }
+                } else {
+                    player.AddItem(SPECIAL_ITEM_ENTRY, 1);
+                }
+            }
+        } else {
+            // If the creature is not damaged enough, log a message
+            console.log(`Creature ${creature.GetName()} (Entry: ${creature.GetEntry()}) was not damaged enough for looting and rewards.`);
+        }
+    }
+};
+
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_JUST_DIED, (...args) => onCreatureDeath(...args));
+```
+
+In this example:
+
+1. We define constants for the creature entry, special item entry, and special item drop chance.
+
+2. In the `creature_event_on_just_died` event handler, we check if the died creature matches the desired entry.
+
+3. If the creature is damaged enough for looting and rewards (determined by `IsDamageEnoughForLootingAndReward`), we proceed to create a loot table for the creature using `GetLootRecipient().GetLoot()`.
+
+4. We add a special item to the loot table with a specific drop chance using `AddItem`.
+
+5. We generate the loot for the creature using `GenerateLoot()`.
+
+6. We grant rewards to the players who participated in the kill. We get the nearby players within a range of 50 yards using `GetPlayersInRange`.
+
+7. For each nearby player, we check if they are in a group. If they are, we add the special item to each group member's inventory using `AddItem`. If they are not in a group, we add the item directly to the player's inventory.
+
+8. If the creature is not damaged enough for looting and rewards, we log a message indicating that no loot or rewards will be granted.
+
+9. Finally, we register the creature event handler for the specified creature entry using `RegisterCreatureEvent`.
+
+This example showcases how to use the `IsDamageEnoughForLootingAndReward` method to control loot and reward distribution based on the creature's damage state, and demonstrates adding custom loot and granting rewards to players.
+
+## IsDungeonBoss
+Returns `true` if the [Creature]'s `flags_extra` includes the Dungeon Boss flag (0x1000000), and returns `false` otherwise. This method is useful for determining if a creature is a boss in a dungeon encounter.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+boolean - `true` if the creature is a dungeon boss, `false` otherwise.
+
+### Example Usage
+In this example, we'll create a script that adjusts the loot table of a creature based on whether it is a dungeon boss or not.
+
+```typescript
+const DUNGEON_BOSS_LOOT_TABLE = 1234;
+const NORMAL_LOOT_TABLE = 5678;
+
+const AdjustLootTable: creature_event_on_just_summoned_creature = (event: number, creature: Creature) => {
+    if (creature.IsDungeonBoss()) {
+        // If the creature is a dungeon boss, set its loot table to the boss-specific one
+        creature.SetLootTable(DUNGEON_BOSS_LOOT_TABLE);
+
+        // Increase the creature's health and damage output for a more challenging fight
+        creature.SetMaxHealth(creature.GetMaxHealth() * 1.5);
+        creature.SetHealth(creature.GetMaxHealth());
+        creature.SetDamage(creature.GetDamage() * 1.25);
+
+        // Announce the presence of the dungeon boss to nearby players
+        creature.SendAreaTriggerMessage("A powerful dungeon boss has appeared!");
+    } else {
+        // If the creature is not a dungeon boss, set its loot table to the normal one
+        creature.SetLootTable(NORMAL_LOOT_TABLE);
+    }
+}
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_JUST_SUMMONED_CREATURE, (...args) => AdjustLootTable(...args));
+```
+
+In this script, we first define constants for the dungeon boss and normal loot table IDs. Then, we register a `CREATURE_EVENT_ON_JUST_SUMMONED_CREATURE` event that triggers the `AdjustLootTable` function whenever a creature is summoned.
+
+Inside the `AdjustLootTable` function, we use the `IsDungeonBoss()` method to determine if the summoned creature is a dungeon boss. If it is, we set its loot table to the boss-specific one, increase its health and damage output to make the fight more challenging, and announce the presence of the boss to nearby players using the `SendAreaTriggerMessage()` method.
+
+If the creature is not a dungeon boss, we simply set its loot table to the normal one.
+
+This script demonstrates how the `IsDungeonBoss()` method can be used in combination with other methods and events to create dynamic and engaging encounters in dungeons.
+
+## IsElite
+Returns a boolean value indicating whether the creature is an elite or rare elite rank.
+
+### Parameters
+None
+
+### Returns
+boolean - Returns `true` if the creature's rank is Elite or Rare Elite, and `false` otherwise.
+
+### Example Usage
+In this example, we'll create a script that checks if a creature is an elite or rare elite, and if so, it will increase its health and damage by 50% and add a special ability to the creature's loot table.
+
+```typescript
+const ABILITY_ENTRY = 12345;
+
+const CreatureEliteScript: creature_event_on_spawn = (event: number, creature: Creature) => {
+    if (creature.IsElite()) {
+        // Increase the creature's health by 50%
+        const currentHealth = creature.GetHealthPct();
+        creature.SetHealth(currentHealth * 1.5);
+
+        // Increase the creature's damage by 50%
+        const damageMod = creature.GetDamageModifier();
+        creature.SetDamageModifier(damageMod * 1.5);
+
+        // Add a special ability to the creature's loot table
+        const lootId = creature.GetLootId();
+        const loot = sObjectMgr.GetLoot(lootId);
+        if (loot) {
+            loot.AddItem(ABILITY_ENTRY, 100, 0, 1, 1);
+            sObjectMgr.AddLoot(lootId, loot);
+        }
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_SPAWN, (...args) => CreatureEliteScript(...args));
+```
+
+In this script:
+1. We define the `ABILITY_ENTRY` constant to represent the special ability item entry ID.
+2. We create a `CreatureEliteScript` function that will be triggered when a creature spawns.
+3. Inside the function, we check if the creature is an elite or rare elite using the `IsElite()` method.
+4. If the creature is an elite or rare elite:
+   - We increase the creature's current health by 50% using `GetHealthPct()` and `SetHealth()` methods.
+   - We increase the creature's damage by 50% using `GetDamageModifier()` and `SetDamageModifier()` methods.
+   - We retrieve the creature's loot ID using `GetLootId()` and get the corresponding loot object using `sObjectMgr.GetLoot()`.
+   - If the loot object exists, we add the special ability item to the loot table with a 100% drop chance using `AddItem()` method.
+   - Finally, we update the loot object using `sObjectMgr.AddLoot()`.
+5. We register the `CreatureEliteScript` function to be triggered when the `CREATURE_EVENT_ON_SPAWN` event occurs.
+
+This script enhances elite and rare elite creatures by increasing their health and damage, and adding a special ability to their loot table when they spawn. It demonstrates how to use the `IsElite()` method to check the creature's rank and perform specific actions based on the result.
+
+## IsFreeBot
+Checks if the creature is a bot that is currently not hired by any player and is available to be hired.
+
+### Parameters
+None
+
+### Returns
+boolean - Returns `true` if the creature is a bot that is currently not hired by any player and is available to be hired, otherwise returns `false`.
+
+### Example Usage
+This example demonstrates how to check if a creature is a free bot and display a message to the player if the bot is available for hire.
+
+```typescript
+const CREATURE_ENTRY_BOT = 123456;
+
+const OnGossipHello: creature_event_on_gossip_hello = (event: number, creature: Creature, player: Player): void => {
+    if (creature.GetEntry() === CREATURE_ENTRY_BOT) {
+        if (creature.IsFreeBot()) {
+            player.SendBroadcastMessage(`The bot ${creature.GetName()} is available for hire!`);
+            player.GossipMenuAddItem(0, "Hire this bot", 0, 1);
+        } else {
+            player.SendBroadcastMessage(`The bot ${creature.GetName()} is already hired by another player.`);
+        }
+        player.GossipSendMenu(DEFAULT_GOSSIP_MESSAGE, creature.GetObjectGuid());
+    }
+};
+
+const OnGossipSelect: creature_event_on_gossip_select = (event: number, creature: Creature, player: Player, sender: number, action: number): void => {
+    if (creature.GetEntry() === CREATURE_ENTRY_BOT && action === 1) {
+        if (creature.IsFreeBot()) {
+            // Hire the bot
+            creature.SetOwnerGuid(player.GetObjectGuid());
+            player.SendBroadcastMessage(`You have successfully hired ${creature.GetName()}!`);
+            player.GossipComplete();
+        } else {
+            player.SendBroadcastMessage(`The bot ${creature.GetName()} is no longer available for hire.`);
+            player.GossipComplete();
+        }
+    }
+};
+
+RegisterCreatureEvent(CREATURE_ENTRY_BOT, CreatureEvents.CREATURE_EVENT_ON_GOSSIP_HELLO, (...args) => OnGossipHello(...args));
+RegisterCreatureEvent(CREATURE_ENTRY_BOT, CreatureEvents.CREATURE_EVENT_ON_GOSSIP_SELECT, (...args) => OnGossipSelect(...args));
+```
+
+In this example:
+1. When a player interacts with a creature (opens the gossip menu), the `OnGossipHello` event is triggered.
+2. If the creature's entry matches the desired bot entry (`CREATURE_ENTRY_BOT`), it checks if the bot is available for hire using the `IsFreeBot()` method.
+3. If the bot is available, it displays a message to the player and adds a gossip menu item to allow the player to hire the bot.
+4. If the bot is already hired, it displays a message indicating that the bot is not available.
+5. When the player selects the "Hire this bot" option from the gossip menu, the `OnGossipSelect` event is triggered.
+6. If the selected action matches the expected action (`action === 1`), it checks again if the bot is still available using `IsFreeBot()`.
+7. If the bot is available, it sets the owner of the bot to the player using `SetOwnerGuid()`, displays a success message, and closes the gossip menu.
+8. If the bot is no longer available, it displays a message indicating that the bot is not available and closes the gossip menu.
+
+This example showcases how to use the `IsFreeBot()` method to determine if a bot creature is available for hire and allows players to hire the bot through the gossip menu interaction.
+
+## IsGuard
+This method checks if the creature is a city guard. City guards are special creatures that protect the cities of Azeroth, such as Stormwind or Orgrimmar. They have unique abilities and behaviors that set them apart from regular creatures.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+- `true` if the creature is a city guard.
+- `false` if the creature is not a city guard.
+
+### Example Usage
+Let's say you want to create an event that triggers when a player enters a city. You can use the `IsGuard()` method to check if the creatures around the player are city guards, and if so, create a special interaction or dialogue.
+
+```typescript
+const STORMWIND_GUARD_ENTRY = 68; // Replace with the actual entry ID of Stormwind guards
+
+const OnPlayerEnterCity: player_event_on_enter_area = (event: number, player: Player, newArea: number, oldArea: number) => {
+    // Check if the player entered Stormwind City (area ID 1519)
+    if (newArea === 1519) {
+        // Get all creatures within a 30-yard radius of the player
+        const creaturesNearby = player.GetCreaturesInRange(30);
+
+        // Iterate through the nearby creatures
+        for (const creature of creaturesNearby) {
+            // Check if the creature is a Stormwind guard
+            if (creature.GetEntry() === STORMWIND_GUARD_ENTRY && creature.IsGuard()) {
+                // Make the guard say a welcome message to the player
+                creature.SendUnitSay("Welcome to Stormwind, " + player.GetName() + "! Enjoy your stay and stay out of trouble.", 0);
+
+                // You can add more interactions or events here, such as:
+                // - Offering a special quest or item to the player
+                // - Triggering a unique visual effect or sound
+                // - Updating the player's reputation with the city faction
+                // - Logging the player's visit to the city in the database
+                // ...
+            }
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_ENTER_AREA, (...args) => OnPlayerEnterCity(...args));
+```
+
+In this example, when a player enters Stormwind City (area ID 1519), the script retrieves all creatures within a 30-yard radius of the player. It then checks each creature to see if it is a Stormwind guard using the `IsGuard()` method. If a guard is found, it sends a welcome message to the player using the `SendUnitSay()` method.
+
+You can expand upon this example by adding more interactions or events specific to city guards, such as offering special quests, items, or triggering unique visual effects or sounds. The `IsGuard()` method allows you to easily identify city guards and create immersive experiences for players when they enter cities.
+
+## IsInEvadeMode
+This method checks if the creature is currently in evade mode, which means it is returning to its spawn position after losing aggro or being unable to reach its target.
+
+### Parameters
+None
+
+### Returns
+boolean - Returns `true` if the creature is in evade mode, `false` otherwise.
+
+### Example Usage
+In this example, we create a script that checks if a creature is in evade mode every 5 seconds. If the creature is in evade mode, it will say "I'm returning to my spawn position!" and start running back to its spawn location. If the creature is not in evade mode, it will say "I'm ready to fight!" and start attacking its target if it has one.
+
+```typescript
+const CHECK_EVADE_INTERVAL = 5000; // 5 seconds
+
+const CheckEvadeMode = (creature: Creature) => {
+    if (creature.IsInEvadeMode()) {
+        creature.Say("I'm returning to my spawn position!", 0);
+        creature.MovePoint(0, creature.GetSpawnX(), creature.GetSpawnY(), creature.GetSpawnZ());
+    } else {
+        creature.Say("I'm ready to fight!", 0);
+        
+        const target = creature.GetVictim();
+        if (target) {
+            if (!creature.IsInCombat()) {
+                creature.EnterCombat(target);
+            }
+            
+            creature.MoveTo(target, true);
+        } else {
+            creature.MoveRandom(5, 5);
+        }
+    }
+};
+
+const OnCreatureUpdate: creature_event_on_update = (event: number, creature: Creature, diff: number) => {
+    const checkEvadeEvent = creature.GetCreatureData().GetData("check_evade_event");
+    
+    if (!checkEvadeEvent) {
+        // Schedule the evade mode check event
+        const newEventId = creature.RegisterEvent(CheckEvadeMode, CHECK_EVADE_INTERVAL, 0, EVENT_FLAG_DO_NOT_EXECUTE_IN_WORLD_CONTEXT);
+        creature.GetCreatureData().SetData("check_evade_event", newEventId);
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_UPDATE, (...args) => OnCreatureUpdate(...args));
+```
+
+In this script, we register a creature update event that schedules a repeating event to check the creature's evade mode every 5 seconds. The event ID is stored in the creature's data storage to prevent scheduling multiple instances of the same event.
+
+When the `CheckEvadeMode` function is called, it checks if the creature is in evade mode using the `IsInEvadeMode()` method. If the creature is in evade mode, it announces its intention to return to its spawn position and starts moving towards it using `MovePoint()`.
+
+If the creature is not in evade mode, it announces its readiness to fight. It then checks if it has a target using `GetVictim()`. If a target exists and the creature is not already in combat, it enters combat with the target using `EnterCombat()`. The creature then starts moving towards the target using `MoveTo()`. If no target exists, the creature moves randomly within a small area using `MoveRandom()`.
+
+## IsNPCBot
+This method checks if the current creature is an NPCBot. It will only work on servers that have NPCBots enabled and the Eluna Mod AraxiaOnline installed.
+
+### Parameters
+None
+
+### Returns
+boolean - Returns `true` if the creature is an NPCBot, `false` otherwise.
+
+### Example Usage
+Here's an example of how to use `IsNPCBot()` to create a script that rewards players for killing NPCBots:
+
+```typescript
+const NPCBOT_KILL_REWARD_ITEM = 12345; // Replace with the actual item entry
+const NPCBOT_KILL_REWARD_AMOUNT = 1;
+
+const OnCreatureKill: creature_event_on_kill = (event: number, creature: Creature, killer: Unit) => {
+    if (creature.IsNPCBot()) {
+        const player = killer.ToPlayer();
+        if (player) {
+            const item = player.AddItem(NPCBOT_KILL_REWARD_ITEM, NPCBOT_KILL_REWARD_AMOUNT);
+            if (item) {
+                player.SendBroadcastMessage(`You have been rewarded with ${NPCBOT_KILL_REWARD_AMOUNT}x ${item.GetName()} for killing an NPCBot!`);
+            } else {
+                player.SendBroadcastMessage("Your inventory is full. Please make space to receive the NPCBot kill reward.");
+            }
+        }
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_KILL, (...args) => OnCreatureKill(...args));
+```
+
+In this example:
+1. We define constants for the reward item entry and the amount to be given.
+2. We register a creature event handler for the `CREATURE_EVENT_ON_KILL` event.
+3. Inside the event handler, we first check if the killed creature is an NPCBot using `IsNPCBot()`.
+4. If it is an NPCBot, we check if the killer is a player using `killer.ToPlayer()`.
+5. If the killer is a player, we attempt to add the reward item to their inventory using `player.AddItem()`.
+6. If the item is successfully added (`item` is truthy), we send a broadcast message to the player informing them of the reward.
+7. If the item cannot be added (inventory is full), we send a broadcast message to the player asking them to make space in their inventory.
+
+This script encourages players to hunt down and kill NPCBots by rewarding them with a specific item. You can customize the reward item and amount based on your server's needs.
+
+## IsRacialLeader
+
+Determines if the creature is a racial leader of a player faction.
+
+### Returns
+
+boolean - Returns `true` if the creature is a racial leader, `false` otherwise.
+
+### Example Usage
+
+This example demonstrates how to check if a creature is a racial leader and grant players of the same faction a special item when they interact with the leader.
+
+```typescript
+const RACIAL_LEADERS = [
+    1747,   // Thrall
+    4949,   // Tyrande Whisperwind
+    3057,   // Cairne Bloodhoof
+    10181,  // Sylvanas Windrunner
+    2784,   // King Magni Bronzebeard
+    4618,   // Gelbin Mekkatorque
+];
+
+const SPECIAL_ITEM_ENTRY = 123456;
+
+const OnGossipHello: creature_event_on_gossip_hello = (event: number, player: Player, creature: Creature) => {
+    if (RACIAL_LEADERS.includes(creature.GetEntry()) && player.GetRace() === creature.GetCreatureInfo()?.Civilized) {
+        if (creature.IsRacialLeader()) {
+            const item = player.AddItem(SPECIAL_ITEM_ENTRY, 1);
+            if (item) {
+                player.SendBroadcastMessage(`Greetings, ${player.GetName()}. As a member of the ${creature.GetName()}'s faction, please accept this special gift.`);
+            } else {
+                player.SendBroadcastMessage(`${player.GetName()}, your inventory is full. Please make room to receive a special gift from ${creature.GetName()}.`);
+            }
+        }
+    }
+    player.GossipComplete();
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_GOSSIP_HELLO, (...args) => OnGossipHello(...args));
+```
+
+In this example:
+
+1. We define an array `RACIAL_LEADERS` containing the entry IDs of the racial leader creatures.
+2. We specify a constant `SPECIAL_ITEM_ENTRY` representing the entry ID of the special item to be granted.
+3. Inside the `OnGossipHello` event handler, we check if the interacted creature is a racial leader by comparing its entry ID with the `RACIAL_LEADERS` array.
+4. If the creature is a racial leader, we use the `IsRacialLeader()` method to confirm that the creature is indeed a racial leader.
+5. If the player belongs to the same faction as the racial leader (determined by comparing the player's race with the creature's civilized race), we proceed to grant the special item.
+6. We use the `AddItem()` method to add the special item to the player's inventory. If the item is successfully added, we send a broadcast message to the player confirming the gift. If the player's inventory is full, we send a message indicating that they need to make room to receive the gift.
+7. Finally, we call `GossipComplete()` to close the gossip window.
+
+By registering this event handler for the `CREATURE_EVENT_ON_GOSSIP_HELLO` event, players of the same faction as the racial leader will receive a special item when they interact with the leader, provided their inventory has space.
+
+## IsReputationGainDisabled
+This method checks if the creature is set to not give reputation when killed.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+boolean - Returns `true` if the creature is set to not give reputation when killed, and `false` otherwise.
+
+### Example Usage
+This example demonstrates how to use the `IsReputationGainDisabled` method to create a custom reputation system for certain creatures.
+
+```typescript
+// Define the factions and reputation values
+const FRIENDLY_FACTION = 1801;
+const HOSTILE_FACTION = 1802;
+const REPUTATION_GAIN = 100;
+
+// Event handler for creature on death
+const OnCreatureDeath: creature_event_on_died = (event: number, creature: Creature, killer: Unit) => {
+    // Check if the killer is a player
+    if (killer instanceof Player) {
+        const player = killer as Player;
+
+        // Check if the creature is set to not give reputation
+        if (!creature.IsReputationGainDisabled()) {
+            // Determine the faction based on the creature's entry
+            const faction = creature.GetEntry() % 2 === 0 ? FRIENDLY_FACTION : HOSTILE_FACTION;
+
+            // Adjust reputation based on the faction
+            if (faction === FRIENDLY_FACTION) {
+                player.SetReputation(faction, player.GetReputation(faction) + REPUTATION_GAIN);
+                player.SendBroadcastMessage(`You have gained ${REPUTATION_GAIN} reputation with the Friendly Faction.`);
+            } else {
+                player.SetReputation(faction, player.GetReputation(faction) - REPUTATION_GAIN);
+                player.SendBroadcastMessage(`You have lost ${REPUTATION_GAIN} reputation with the Hostile Faction.`);
+            }
+        } else {
+            player.SendBroadcastMessage("This creature does not grant reputation.");
+        }
+    }
+};
+
+// Register the event
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_DIED, (...args) => OnCreatureDeath(...args));
+```
+
+In this example:
+1. We define constants for the faction IDs and the reputation gain value.
+2. In the `OnCreatureDeath` event handler, we first check if the killer is a player using the `instanceof` operator.
+3. We then use the `IsReputationGainDisabled` method to check if the creature is set to not give reputation.
+4. If the creature gives reputation, we determine the faction based on the creature's entry ID (even entries are friendly, odd entries are hostile).
+5. Depending on the faction, we adjust the player's reputation using the `SetReputation` method and send a broadcast message to inform the player.
+6. If the creature is set to not give reputation, we send a different broadcast message to the player.
+7. Finally, we register the event handler for the `CREATURE_EVENT_ON_DIED` event.
+
+This example showcases how the `IsReputationGainDisabled` method can be used in conjunction with other methods and game events to create a custom reputation system for specific creatures, providing a more engaging gameplay experience.
+
+## IsTappedBy
+This method checks if the creature has been tapped by a specific player. A creature is considered tapped if it has been engaged in combat by a player or their group, and will only provide loot and experience to those players.
+
+### Parameters
+* player: [Player](./player.md) - The player to check if they have tapped the creature.
+
+### Returns
+* boolean - Returns `true` if the creature has been tapped by the specified player, and `false` otherwise.
+
+### Example Usage
+This example demonstrates how to use the `IsTappedBy` method to prevent players from interfering with another player's combat encounter. When a player enters combat with a creature, the script checks if the creature has already been tapped by another player. If it has, the player is sent a message indicating that the creature is busy and cannot be engaged.
+
+```typescript
+const onEnterCombat: player_event_on_enter_combat = (event: number, player: Player, enemy: Unit): void => {
+    if (enemy instanceof Creature) {
+        const creature = enemy as Creature;
+
+        // Check if the creature is already tapped by another player
+        const nearbyPlayers = creature.GetPlayersInRadius(50);
+        for (const nearbyPlayer of nearbyPlayers) {
+            if (nearbyPlayer !== player && creature.IsTappedBy(nearbyPlayer)) {
+                player.SendBroadcastMessage(`The ${creature.GetName()} is already engaged in combat with another player.`);
+                player.CombatStop(true);
+                return;
+            }
+        }
+
+        // If the creature is not tapped, proceed with combat
+        player.SendBroadcastMessage(`You engage the ${creature.GetName()} in combat!`);
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_ENTER_COMBAT, (...args) => onEnterCombat(...args));
+```
+
+In this example:
+1. When a player enters combat with a unit, the script checks if the unit is a creature using the `instanceof` operator.
+2. If the unit is a creature, the script retrieves all nearby players within a 50-yard radius using the `GetPlayersInRadius` method.
+3. It then iterates over the nearby players and checks if any of them (excluding the current player) have already tapped the creature using the `IsTappedBy` method.
+4. If the creature is already tapped by another player, the script sends a message to the current player indicating that the creature is busy and cannot be engaged. It also stops the combat for the current player using `CombatStop(true)`.
+5. If the creature is not tapped by any other player, the script allows the combat to proceed and sends a message to the player confirming the engagement.
+
+This example demonstrates how the `IsTappedBy` method can be used to manage creature tapping and prevent players from interfering with each other's combat encounters.
+
+## IsTargetableForAttack
+This method checks if the creature is targetable for attack. It considers various factors such as creature's state, flags, and specified conditions.
+
+### Parameters
+* `mustBeDead` (optional): boolean
+  - If set to `true`, the method will return `true` only if the creature is dead and targetable.
+  - If set to `false` or not provided, the creature must be alive and targetable for the method to return `true`.
+
+### Returns
+* boolean: Returns `true` if the creature is targetable for attack based on the specified conditions, `false` otherwise.
+
+### Example Usage
+In this example, we have a custom AI script for a creature that checks if it can be targeted for attack before executing its combat logic.
+
+```typescript
+const AI_INTERVAL = 1000;
+const SPELL_FROSTBOLT = 15043;
+
+const onUpdateAI: creature_event_on_aiupdate = (event: number, creature: Creature, diff: number) => {
+    if (!creature.IsInCombat()) {
+        return;
+    }
+
+    if (creature.GetHealthPct() < 30 && creature.IsTargetableForAttack(true)) {
+        // If the creature is below 30% health and targetable while dead, cast a special ability
+        creature.CastSpell(creature, SPELL_SPECIAL_ABILITY, true);
+    }
+
+    // Check if the creature is alive and targetable before continuing with combat logic
+    if (!creature.IsTargetableForAttack()) {
+        return;
+    }
+
+    if (creature.GetVictim() && creature.IsWithinMeleeRange(creature.GetVictim())) {
+        // In melee range, perform melee attacks
+        if (creature.IsAttackReady()) {
+            creature.AttackerStateUpdate(creature.GetVictim());
+            creature.ResetAttackTimer();
+        }
+    } else {
+        // Not in melee range, cast spells
+        if (creature.IsSpellReady(SPELL_FROSTBOLT)) {
+            creature.CastSpell(creature.GetVictim(), SPELL_FROSTBOLT, false);
+            creature.SetSpellCooldown(SPELL_FROSTBOLT, 3000);
+        }
+    }
+};
+
+RegisterCreatureEvent(EVENT_ON_AIUPDATE, (...args) => onUpdateAI(...args));
+```
+
+In this script:
+1. We first check if the creature is in combat. If not, we return early.
+2. If the creature's health is below 30% and it is targetable while dead (`mustBeDead` set to `true`), we cast a special ability.
+3. We then check if the creature is alive and targetable using `IsTargetableForAttack()` with the default `mustBeDead` value (`false`). If not, we return early to prevent further combat logic execution.
+4. If the creature has a victim and is within melee range, it performs melee attacks using `AttackerStateUpdate()` when ready.
+5. If the creature is not in melee range, it casts the "Frostbolt" spell (`SPELL_FROSTBOLT`) when the spell is ready.
+
+This script demonstrates how `IsTargetableForAttack()` can be used to conditionally execute combat logic based on the creature's targetability state.
+
+## IsTrigger
+Returns whether the creature is an invisible trigger or not.
+
+### Parameters
+None
+
+### Returns
+boolean - Returns `true` if the creature is an invisible trigger, `false` otherwise.
+
+### Example Usage
+This example demonstrates how to use the `IsTrigger` method to determine if a creature is an invisible trigger and perform different actions based on the result.
+
+```typescript
+const INVISIBLE_TRIGGER_ENTRY = 12345;
+
+const HandleCreatureKill: player_event_on_kill_creature = (event: number, player: Player, creature: Creature) => {
+    if (creature.GetEntry() === INVISIBLE_TRIGGER_ENTRY) {
+        if (creature.IsTrigger()) {
+            // Creature is an invisible trigger
+            const triggerLocation = creature.GetLocation();
+            player.Teleport(triggerLocation.map, triggerLocation.x, triggerLocation.y, triggerLocation.z, triggerLocation.o);
+            player.SendBroadcastMessage("You have activated the invisible trigger!");
+            
+            // Perform additional actions for the invisible trigger
+            const questId = 678;
+            if (!player.HasQuest(questId)) {
+                player.AddQuest(questId);
+                player.SendBroadcastMessage("You have received a new quest!");
+            }
+            
+            // Spawn a special NPC near the trigger location
+            const npcEntry = 9876;
+            const spawnLocation = creature.GetRelativePoint(2.0, 0.0);
+            const spawnedNpc = player.SummonCreature(npcEntry, spawnLocation.x, spawnLocation.y, spawnLocation.z, spawnLocation.o, 2, 60000);
+            if (spawnedNpc) {
+                spawnedNpc.Say("Greetings, adventurer! I have been awaiting your arrival.", 0);
+            }
+        } else {
+            // Creature is not an invisible trigger
+            player.SendBroadcastMessage("You have killed a regular creature.");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_KILL_CREATURE, (...args) => HandleCreatureKill(...args));
+```
+
+In this example:
+1. We define the entry ID of the invisible trigger creature as `INVISIBLE_TRIGGER_ENTRY`.
+2. In the `HandleCreatureKill` event handler, we check if the killed creature's entry matches the invisible trigger entry.
+3. If it does, we use `creature.IsTrigger()` to determine if the creature is an invisible trigger.
+4. If the creature is an invisible trigger:
+   - We get the trigger's location using `creature.GetLocation()`.
+   - We teleport the player to the trigger's location using `player.Teleport()`.
+   - We send a broadcast message to the player indicating they have activated the invisible trigger.
+   - We perform additional actions, such as adding a quest to the player's quest log if they don't already have it.
+   - We spawn a special NPC near the trigger location using `player.SummonCreature()` and make the NPC say a greeting message.
+5. If the creature is not an invisible trigger, we send a different broadcast message to the player indicating they have killed a regular creature.
+
+This example showcases how the `IsTrigger` method can be used in conjunction with other methods and game events to create interactive triggers in the game world.
+
+## IsWorldBoss
+
+Determines if the creature is a world boss. World bosses are typically powerful raid encounters that require a group of players to defeat.
+
+### Parameters
+
+None
+
+### Returns
+
+boolean - Returns `true` if the creature is a world boss, `false` otherwise.
+
+### Example Usage
+
+This example demonstrates how to use the `IsWorldBoss()` method to determine if a creature is a world boss and adjust its loot accordingly.
+
+```typescript
+const WORLD_BOSS_LOOT_ITEM = 12345;
+const WORLD_BOSS_LOOT_CHANCE = 25;
+
+const onCreatureDeath: creature_event_on_just_died = (event: number, creature: Creature, killer: Unit) => {
+    if (creature.IsWorldBoss()) {
+        // Increase the respawn time for world bosses
+        creature.SetRespawnDelay(172800); // 48 hours in seconds
+
+        // Notify the raid group that they have defeated a world boss
+        killer.ToPlayer().GetGroup().SendGroupMessage(`Congratulations on defeating the world boss ${creature.GetName()}!`);
+
+        // Increase the drop chance of a special loot item for world bosses
+        const lootChance = creature.GetLootMode() == 1 ? WORLD_BOSS_LOOT_CHANCE * 2 : WORLD_BOSS_LOOT_CHANCE;
+        if (Math.random() * 100 < lootChance) {
+            creature.AddLootMode(LOOT_MODE_HARD_MODE_1);
+            const loot = creature.AddLoot(WORLD_BOSS_LOOT_ITEM, LootType.LOOT_CORPSE);
+            loot.SetItemCount(1);
+        }
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_JUST_DIED, (...args) => onCreatureDeath(...args));
+```
+
+In this example, when a creature dies, the script checks if it is a world boss using the `IsWorldBoss()` method. If it is a world boss, the script performs the following actions:
+
+1. Sets the respawn delay to 48 hours (172800 seconds) using `SetRespawnDelay()`, ensuring that the world boss does not respawn too quickly.
+
+2. Sends a congratulatory message to the raid group using `GetGroup()` and `SendGroupMessage()`, informing them of their victory over the world boss.
+
+3. Increases the drop chance of a special loot item (`WORLD_BOSS_LOOT_ITEM`) based on the creature's loot mode. If the loot mode is set to 1 (hard mode), the drop chance is doubled.
+
+4. If the random number generated is within the calculated loot chance, the script adds the `LOOT_MODE_HARD_MODE_1` loot mode to the creature using `AddLootMode()`, and adds the special loot item to the creature's loot using `AddLoot()` with a count of 1.
+
+This example showcases how the `IsWorldBoss()` method can be used to differentiate between regular creatures and world bosses, allowing for customized behavior and loot handling based on the creature's boss status.
+
+## MoveWaypoint
+This method will command the Creature to start following its predefined waypoint path that is configured in the database table `creature_addon`.
+
+### Parameters
+None
+
+### Returns
+None
+
+### Example Usage
+Here's an example of how to use the `MoveWaypoint` method to make a Creature start following its waypoint path when a player interacts with it:
+
+```typescript
+const CREATURE_ENTRY = 1234;
+
+const onGossipHello: creature_event_on_gossip_hello = (event: number, player: Player, creature: Creature): boolean => {
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        player.GossipMenuAddItem(0, "Start patrolling", 1, 1);
+        player.GossipSendMenu(player.GetGUID(), creature.GetGUID());
+        return true;
+    }
+    return false;
+};
+
+const onGossipSelect: creature_event_on_gossip_select = (event: number, player: Player, creature: Creature, sender: number, action: number): boolean => {
+    if (creature.GetEntry() === CREATURE_ENTRY && action === 1) {
+        player.GossipComplete();
+        creature.MoveWaypoint();
+        creature.SendUnitSay("I will start patrolling now!", ChatMsg.CHAT_MSG_MONSTER_SAY, 0);
+        return true;
+    }
+    return false;
+};
+
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_GOSSIP_HELLO, (...args) => onGossipHello(...args));
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_GOSSIP_SELECT, (...args) => onGossipSelect(...args));
+```
+
+In this example:
+1. We define a constant `CREATURE_ENTRY` with the entry ID of the Creature we want to work with.
+2. We register a `CREATURE_EVENT_ON_GOSSIP_HELLO` event for the specified Creature entry.
+3. In the `onGossipHello` event handler, we check if the Creature's entry matches the desired entry.
+4. If it does, we add a gossip menu item with the text "Start patrolling" and send the gossip menu to the player.
+5. We register a `CREATURE_EVENT_ON_GOSSIP_SELECT` event for the specified Creature entry.
+6. In the `onGossipSelect` event handler, we check if the Creature's entry matches the desired entry and if the selected action is 1 (corresponding to the "Start patrolling" option).
+7. If the conditions are met, we close the gossip menu using `player.GossipComplete()`.
+8. We call the `creature.MoveWaypoint()` method to make the Creature start following its waypoint path.
+9. We make the Creature say "I will start patrolling now!" using `creature.SendUnitSay()`.
+
+This script allows players to interact with the specified Creature and choose the "Start patrolling" option from the gossip menu. When selected, the Creature will start following its predefined waypoint path and announce it to nearby players.
+
+Note: Make sure to replace `CREATURE_ENTRY` with the actual entry ID of the Creature you want to work with, and ensure that the Creature has a valid waypoint path defined in the `creature_addon` table.
+
+## RemoveCorpse
+This method removes the creature's corpse from the game world. It is useful in situations where you want to instantly remove a creature's corpse without waiting for the normal corpse despawn timer.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+This method does not return any value.
+
+### Example Usage
+In this example, we will create a custom script that removes the corpse of a specific creature when it dies. Let's assume we have a boss creature with the entry ID `BOSS_ENTRY_ID` and we want to remove its corpse immediately upon death to prevent players from looting it.
+
+```typescript
+const BOSS_ENTRY_ID = 12345;
+
+const onCreatureDeath: creature_event_on_just_died = (event: CreatureEvents, creature: Creature, killer: Unit) => {
+    // Check if the died creature is the boss
+    if (creature.GetEntry() === BOSS_ENTRY_ID) {
+        // Remove the boss's corpse immediately
+        creature.RemoveCorpse();
+
+        // Perform additional actions or spawn special loot
+        // For example, let's spawn a chest containing special rewards
+        const chestId = 54321;
+        const x = creature.GetX();
+        const y = creature.GetY();
+        const z = creature.GetZ();
+        const o = creature.GetO();
+        const map = creature.GetMap();
+
+        map.SpawnGameObject(chestId, x, y, z, o, 0, 0, 0, 0, 300);
+
+        // Announce the boss's death to all players
+        const bossName = creature.GetName();
+        map.SendWorldText(`The mighty ${bossName} has been defeated! Special rewards await the victors!`);
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_JUST_DIED, onCreatureDeath);
+```
+
+In this script:
+1. We define the entry ID of the boss creature as `BOSS_ENTRY_ID`.
+2. We register a creature event handler for the `CREATURE_EVENT_ON_JUST_DIED` event.
+3. Inside the event handler, we check if the died creature's entry ID matches the boss entry ID.
+4. If it matches, we call the `RemoveCorpse()` method to instantly remove the boss's corpse.
+5. After removing the corpse, we perform additional actions, such as spawning a special chest containing rewards.
+6. We retrieve the boss's position and map using the appropriate methods (`GetX()`, `GetY()`, `GetZ()`, `GetO()`, `GetMap()`).
+7. We spawn a game object (chest) at the boss's position using `SpawnGameObject()` with a despawn timer of 300 seconds (5 minutes).
+8. Finally, we send a world text message to all players on the map, announcing the boss's defeat and the availability of special rewards.
+
+By using the `RemoveCorpse()` method, we ensure that the boss's corpse is instantly removed, preventing players from looting it directly. Instead, we spawn a special chest that contains the rewards for defeating the boss. This adds a unique twist to the encounter and rewards players for their victory.
+
+## RemoveLootMode
+Removes a specified loot mode from the creature. Loot modes determine which items can be looted from the creature based on how it was killed or interacted with.
+
+### Parameters
+* lootMode: number - The loot mode to remove from the creature. Loot modes are defined in the LootModes enum.
+
+### Example Usage
+In this example, we have a script that adjusts the loot mode of a specific creature based on the number of players in the group that killed it. If the group size is 5 or more, we remove the "Group Loot" mode, which would normally guarantee an extra roll for each player. This can help balance loot distribution in larger groups.
+
+```typescript
+const GROUP_LOOT_MODE = 2; // Corresponds to the Group Loot mode in the LootModes enum
+const MIN_GROUP_SIZE_FOR_NERF = 5;
+const TARGET_CREATURE_ENTRY = 12345; // Replace with the entry ID of your target creature
+
+const OnCreatureDeath: creature_event_on_creature_death = (event: number, creature: Creature, killer: Unit) => {
+    // Check if the killed creature is the one we're interested in
+    if (creature.GetEntry() === TARGET_CREATURE_ENTRY) {
+        const killerPlayer = killer.ToPlayer();
+
+        // Check if the killer is a player and is in a group
+        if (killerPlayer && killerPlayer.IsInGroup()) {
+            const groupSize = killerPlayer.GetGroup().GetMembersCount();
+
+            // If the group size is 5 or more, remove the Group Loot mode
+            if (groupSize >= MIN_GROUP_SIZE_FOR_NERF) {
+                creature.RemoveLootMode(GROUP_LOOT_MODE);
+                killerPlayer.SendBroadcastMessage("The creature's loot mode has been adjusted for your group size.");
+            }
+        }
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_CREATURE_DEATH, (...args) => OnCreatureDeath(...args));
+```
+
+In this script, we first define some constants for the specific loot mode we want to remove, the minimum group size threshold for applying the change, and the entry ID of the creature we're targeting.
+
+We then register a callback function for the `CREATURE_EVENT_ON_CREATURE_DEATH` event, which triggers whenever a creature is killed. Inside the callback, we first check if the killed creature matches our target entry ID.
+
+Next, we check if the killer is a player and if they are in a group. If so, we get the size of their group using `GetMembersCount()`.
+
+If the group size is equal to or greater than our defined threshold (`MIN_GROUP_SIZE_FOR_NERF`), we call `RemoveLootMode()` on the creature, passing in the `GROUP_LOOT_MODE` constant to remove that specific loot mode. Finally, we send a message to the player to let them know that the creature's loot mode has been adjusted.
+
+This script showcases how `RemoveLootMode()` can be used in conjunction with other methods and game events to dynamically adjust a creature's loot behavior based on specific conditions.
+
+## ResetLootMode
+Resets the loot mode of the creature to the default value defined in the database.
+
+### Parameters
+None
+
+### Returns
+None
+
+### Example Usage
+This example demonstrates how to reset the loot mode of a creature after changing it temporarily for a specific encounter or event.
+
+```typescript
+const CREATURE_ENTRY = 1234;
+const SPECIAL_LOOT_MODE = 2;
+
+let specialLootCreature: Creature | null = null;
+
+const OnCreatureCreate: creature_event_on_creature_create = (event: number, creature: Creature): void => {
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        specialLootCreature = creature;
+        creature.SetLootMode(SPECIAL_LOOT_MODE);
+    }
+};
+
+const OnEncounterEnd: map_event_on_encounter_end = (event: number, map: Map, difficulty: number, encounters: number, success: boolean): void => {
+    if (success && specialLootCreature) {
+        // Encounter completed successfully, reset the loot mode
+        specialLootCreature.ResetLootMode();
+        specialLootCreature = null;
+    }
+};
+
+const OnCreatureDeath: creature_event_on_creature_death = (event: number, creature: Creature, killer: Unit): void => {
+    if (creature === specialLootCreature) {
+        // If the creature dies before the encounter ends, reset the loot mode
+        creature.ResetLootMode();
+        specialLootCreature = null;
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_CREATURE_CREATE, (...args) => OnCreatureCreate(...args));
+RegisterMapEvent(MapEvents.MAP_EVENT_ON_ENCOUNTER_END, (...args) => OnEncounterEnd(...args));
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_CREATURE_DEATH, (...args) => OnCreatureDeath(...args));
+```
+
+In this example:
+1. When a creature with entry `CREATURE_ENTRY` is created, it is assigned to the `specialLootCreature` variable and its loot mode is set to `SPECIAL_LOOT_MODE`.
+2. If the encounter ends successfully (`success` is `true`), and `specialLootCreature` is not `null`, the creature's loot mode is reset using `ResetLootMode()`, and `specialLootCreature` is set to `null`.
+3. If the creature dies before the encounter ends, the `OnCreatureDeath` event is triggered, and if the dead creature is the `specialLootCreature`, its loot mode is reset, and `specialLootCreature` is set to `null`.
+
+This ensures that the creature's loot mode is reset to the default value, either when the encounter ends successfully or when the creature dies before the encounter concludes, preventing any unintended consequences of the modified loot mode.
+
+## Respawn
+Respawns the creature in the world. If the creature is already alive, this method will do nothing.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+This method does not return anything.
+
+### Example Usage
+Here's an example of how to use the `Respawn` method to respawn a creature after it has been killed by a player:
+
+```typescript
+const CREATURE_ENTRY = 1234;
+let _creature: Creature | null = null;
+
+const OnCreatureCreate: creature_event_on_creature_create = (event: number, creature: Creature): void => {
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        _creature = creature;
+    }
+};
+
+const OnCreatureDeath: creature_event_on_creature_death = (event: number, creature: Creature, killer: Unit): void => {
+    if (creature === _creature) {
+        // Respawn the creature after 30 seconds
+        setTimeout(() => {
+            if (_creature && !_creature.IsAlive()) {
+                _creature.Respawn();
+                SendWorldMessage(`The creature with entry ${CREATURE_ENTRY} has been respawned!`);
+            }
+        }, 30000);
+    }
+};
+
+const OnCreatureDelete: creature_event_on_creature_delete = (event: number, creature: Creature): void => {
+    if (creature === _creature) {
+        _creature = null;
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_CREATURE_CREATE, (...args) => OnCreatureCreate(...args));
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_CREATURE_DEATH, (...args) => OnCreatureDeath(...args));
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_CREATURE_DELETE, (...args) => OnCreatureDelete(...args));
+```
+
+In this example, we're tracking a specific creature with the entry ID `1234`. When the creature is created, we store a reference to it in the `_creature` variable. 
+
+When the creature dies, we start a timer that will respawn the creature after 30 seconds using the `Respawn` method. We also send a message to all players on the server indicating that the creature has been respawned.
+
+Finally, we clean up the `_creature` reference when the creature is deleted from the world to avoid any memory leaks.
+
+Note that this is just one example of how the `Respawn` method can be used. You could also use it to respawn creatures on a regular interval, or in response to other events in the game world.
+
+## SaveToDB
+This method saves the current state of the Creature to the database.  This is useful for storing custom attributes, or 
+data about the creature that needs to persist between server restarts or crashes.  
+
+### Parameters
+None
+
+### Returns
+None
+
+### Example Usage
+This example will have a Creature that keeps track of how many times it has killed players.  We will attach
+that data to the creature and save it to the DB so that it persists between restarts. 
+
+```typescript
+let CREATURE_ENTRY = 1234; 
+let CREATURE_KILL_COUNT = "KillCount";
+
+const KillCounter = (event: number, creature: Creature, victim: Unit) => {
+    if(victim instanceof Player) {
+        const killCount = creature.GetData(CREATURE_KILL_COUNT);
+        if(!killCount) {
+            creature.SetData(CREATURE_KILL_COUNT, 1);
+        }
+        else {
+            creature.SetData(CREATURE_KILL_COUNT, killCount + 1);
+        }
+        creature.SaveToDB();
+    }
+}
+
+const LoadKillCount = (event: number, creature: Creature) => {
+    const killCount = creature.GetData(CREATURE_KILL_COUNT);
+    if(!killCount) {
+        creature.SetData(CREATURE_KILL_COUNT, 0);
+    }
+}
+
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_JUST_DIED, KillCounter);
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_SPAWN, LoadKillCount);
+```
+
+In this example, we are using custom data through `GetData` and `SetData` to track how many kills a creature has.  
+Whenever the creature kills a player, we increment the kill count and save the creature to the database using `SaveToDB()`. 
+
+Additionally, when the creature spawns we check to see if it has an existing kill count, if it doesn't we initialize it to 0.
+
+This script will cause the Creature to keep track of how many players it has killed, even between server restarts.
+
+## SelectVictim
+This method is used to make the Creature attempt to find a new target to attack. It should be called every update cycle for the Creature's AI to ensure that the Creature is always targeting the most appropriate enemy.
+
+When called, the Creature will scan its surroundings for potential targets based on its current AI state and settings. This may include factors such as the target's proximity, threat level, and whether the target is already engaged in combat with another entity.
+
+If a suitable target is found, the Creature will switch its current target to the new one and begin attacking it. If no valid target is found, the Creature will continue to target its current enemy (if any) or remain idle until a new target becomes available.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+This method does not return any value.
+
+### Example Usage
+In this example, we create a custom AI update script for a Creature that periodically scans for new targets and switches to the closest one if its current target is no longer valid or out of range.
+
+```typescript
+const CREATURE_ENTRY = 1234;
+const UPDATE_INTERVAL = 2000; // Update every 2 seconds
+
+const CustomAI = (creature: Creature): void => {
+    creature.SetAIUpdateFrequency(UPDATE_INTERVAL);
+
+    creature.RegisterAIUpdateEvent((creature: Creature) => {
+        if (!creature.IsInCombat()) {
+            // If the Creature is not in combat, scan for nearby enemies
+            creature.SelectVictim();
+        } else {
+            const currentTarget = creature.GetVictim();
+            if (!currentTarget || !currentTarget.IsAlive() || !creature.IsInRange(currentTarget, 0, 10)) {
+                // If the current target is invalid or out of range, find a new target
+                creature.SelectVictim();
+            }
+        }
+    });
+};
+
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_SPAWN, (creature: Creature) => {
+    CustomAI(creature);
+});
+```
+
+In this script:
+1. We define the Creature entry ID and the desired AI update interval (in milliseconds).
+2. We create a custom AI function that sets up the Creature's AI update event.
+3. Inside the AI update event, we first check if the Creature is in combat.
+   - If not in combat, we call `SelectVictim()` to make the Creature scan for nearby enemies and select a target.
+   - If already in combat, we check if the current target is still valid (alive and within a certain range).
+     - If the current target is invalid or out of range, we call `SelectVictim()` to find a new target.
+4. Finally, we register the custom AI function to be called whenever a Creature with the specified entry ID spawns.
+
+By calling `SelectVictim()` regularly within the Creature's AI update event, we ensure that the Creature always tries to find and attack the most appropriate target based on its current situation.
+
+## SetAggroEnabled
+Sets whether the creature can be aggroed by players or not. If set to false, the creature will not engage in combat even if attacked.
+
+### Parameters
+* allow: boolean (optional) - If set to true (default), the creature can be aggroed. If set to false, the creature cannot be aggroed.
+
+### Example Usage
+Disable aggro for a specific creature entry and re-enable it after a certain time period.
+```typescript
+const CREATURE_ENTRY = 1234;
+const AGGRO_DISABLE_DURATION = 60000; // 1 minute in milliseconds
+
+let creature = map.GetCreatureByEntry(CREATURE_ENTRY);
+if (creature) {
+    creature.SetAggroEnabled(false);
+    console.log(`Aggro disabled for creature with entry ${CREATURE_ENTRY}`);
+
+    setTimeout(() => {
+        if (creature && creature.IsInWorld()) {
+            creature.SetAggroEnabled(true);
+            console.log(`Aggro re-enabled for creature with entry ${CREATURE_ENTRY}`);
+        }
+    }, AGGRO_DISABLE_DURATION);
+}
+```
+
+In this example:
+1. We define the specific creature entry we want to modify and the duration for which the aggro will be disabled.
+2. We retrieve the creature object using `map.GetCreatureByEntry()`.
+3. If the creature is found, we disable its aggro using `SetAggroEnabled(false)`.
+4. We log a message indicating that aggro has been disabled for the creature.
+5. We use `setTimeout()` to schedule a callback function to be executed after the specified duration.
+6. In the callback function, we first check if the creature still exists and is in the world using `IsInWorld()`.
+7. If the creature is valid, we re-enable its aggro using `SetAggroEnabled(true)`.
+8. We log a message indicating that aggro has been re-enabled for the creature.
+
+This script demonstrates how to temporarily disable aggro for a specific creature and re-enable it after a certain time period. It can be useful in scenarios where you want to create a non-aggressive creature that players can interact with without engaging in combat, and then revert it back to its normal aggressive behavior after a specific duration.
+
+## SetDeathState
+Sets the creature's death state to the specified value. This can be used to instantly kill or resurrect a creature, or to change its death state for scripting purposes.
+
+### Parameters
+* deathState: number - The death state to set. Valid values are:
+  * 0 - ALIVE
+  * 1 - JUST_DIED
+  * 2 - CORPSE
+  * 3 - DEAD
+
+### Example Usage
+This example demonstrates how to use the `SetDeathState` method to create a script that causes a creature to instantly respawn after being killed by a player.
+
+```typescript
+const CREATURE_ENTRY = 1234;
+const RESPAWN_DELAY = 5000; // 5 seconds
+
+const onCreatureDeath: creature_event_on_just_died = (event: number, creature: Creature, killer: Unit) => {
+    if (creature.GetEntry() === CREATURE_ENTRY && killer instanceof Player) {
+        // Schedule the creature to respawn after the specified delay
+        creature.RegisterEvent((creature: Creature) => {
+            creature.SetDeathState(0); // Set the creature's death state to ALIVE
+            creature.SetHealth(creature.GetMaxHealth()); // Restore the creature's health to full
+            creature.SetPosition(creature.GetX(), creature.GetY(), creature.GetZ(), creature.GetO()); // Move the creature back to its original position
+            creature.Respawn(); // Respawn the creature
+        }, RESPAWN_DELAY);
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_JUST_DIED, (...args) => onCreatureDeath(...args));
+```
+
+In this example:
+1. We define constants for the creature entry and respawn delay.
+2. We register a `CREATURE_EVENT_ON_JUST_DIED` event handler for the specified creature entry.
+3. When the creature dies, we check if the killer is a player.
+4. If the killer is a player, we schedule an event to respawn the creature after the specified delay using `creature.RegisterEvent()`.
+5. Inside the scheduled event, we set the creature's death state to `ALIVE` using `SetDeathState(0)`.
+6. We restore the creature's health to full using `SetHealth(creature.GetMaxHealth())`.
+7. We move the creature back to its original position using `SetPosition()`.
+8. Finally, we call `Respawn()` to respawn the creature.
+
+This script ensures that when the specified creature is killed by a player, it will instantly respawn after the defined delay, effectively making it unkillable.
+
+Note: Be cautious when using this script, as instantly respawning creatures can potentially disrupt game balance and player experience if not used appropriately.
+
+## SetDefaultMovementType
+Sets the default movement generator type for the creature. This controls how the creature will move by default if not engaged in combat or following any other overriding movement types.
+
+### Parameters
+type: [MovementGeneratorType](./movement-generator-type.md) - The type of movement generator to set as default.
+
+### Example Usage
+Setting a creature's movement type to random motion within a set radius of their spawn point.
+```typescript
+const CREATURE_ENTRY = 1234;
+const MOVEMENT_RADIUS = 10;
+
+const onCreatureSpawn: creature_event_on_spawn = (event: number, creature: Creature) => {
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        creature.SetDefaultMovementType(MovementGeneratorType.RANDOM_MOTION_TYPE);
+        const spawnPos = creature.GetSpawnPosition();
+        const randomX = spawnPos.x + (Math.random() * MOVEMENT_RADIUS * 2) - MOVEMENT_RADIUS;
+        const randomY = spawnPos.y + (Math.random() * MOVEMENT_RADIUS * 2) - MOVEMENT_RADIUS;
+        const randomZ = creature.GetMap().GetHeight(creature.GetPhaseMask(), randomX, randomY, spawnPos.z);
+        creature.MovePoint(1, randomX, randomY, randomZ);
+        creature.SetWanderDistance(MOVEMENT_RADIUS);
+        creature.SetHomePosition(spawnPos.x, spawnPos.y, spawnPos.z, spawnPos.o);
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_SPAWN, (...args) => onCreatureSpawn(...args));
+```
+
+In this example, creatures with the specified entry ID will be set to use the `RANDOM_MOTION_TYPE` movement generator upon spawning. The script calculates a random position within a specified radius (`MOVEMENT_RADIUS`) of the creature's spawn point and moves the creature to that location using `MovePoint`. The creature's wander distance is set to the same radius, ensuring it stays within that area. Finally, the creature's home position is set to its spawn position, so it will return to that point if needed.
+
+This type of movement can be useful for ambient creatures that should wander around a specific area, adding life to the game world without requiring specific paths or waypoints.
+
+## SetDisableGravity
+This method allows you to enable or disable gravity for a Creature. When gravity is disabled, the Creature will be able to fly.
+
+### Parameters
+- `disable`: boolean
+  - If set to `true`, gravity will be disabled, allowing the Creature to fly.
+  - If set to `false`, gravity will be enabled, and the Creature will be subject to normal gravity.
+
+### Example Usage
+In this example, we have a script that makes a specific Creature fly when it enters combat and land when it leaves combat.
+
+```typescript
+const CREATURE_ENTRY = 1234; // Replace with the desired Creature entry ID
+
+let flyingCreature: Creature | null = null;
+
+const OnEnterCombat = (event: any, creature: Creature, target: Unit) => {
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        creature.SetDisableGravity(true);
+        creature.MoveTo(creature.GetX(), creature.GetY(), creature.GetZ() + 10, true);
+        flyingCreature = creature;
+    }
+};
+
+const OnLeaveCombat = (event: any, creature: Creature) => {
+    if (creature === flyingCreature) {
+        creature.SetDisableGravity(false);
+        creature.MoveTo(creature.GetX(), creature.GetY(), creature.GetZ() - 10, true);
+        flyingCreature = null;
+    }
+};
+
+const OnCreatureKill = (event: any, creature: Creature, victim: Unit) => {
+    if (creature === flyingCreature) {
+        const x = creature.GetX();
+        const y = creature.GetY();
+        const z = creature.GetZ();
+
+        // Make the Creature fly in a circle
+        for (let i = 0; i < 360; i += 30) {
+            const angle = i * Math.PI / 180;
+            const newX = x + Math.cos(angle) * 5;
+            const newY = y + Math.sin(angle) * 5;
+            creature.MoveTo(newX, newY, z, true);
+        }
+    }
+};
+
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_ENTER_COMBAT, OnEnterCombat);
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_LEAVE_COMBAT, OnLeaveCombat);
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_KILLED_UNIT, OnCreatureKill);
+```
+
+In this script:
+1. When the Creature with the specified entry ID enters combat, it will start flying by disabling gravity and moving 10 units higher.
+2. When the Creature leaves combat, it will land by enabling gravity and moving 10 units lower.
+3. When the Creature kills a unit while flying, it will perform a circular flying motion around its current position.
+
+This example demonstrates how you can use the `SetDisableGravity` method in combination with other methods and events to create dynamic behaviors for Creatures in your game.
+
+## SetDisableReputationGain
+Set whether the Creature will give reputation upon kill or quest completion.
+
+### Parameters
+* disable: boolean (optional) - If set to true, reputation gain will be disabled. If set to false or omitted, reputation gain will be enabled.
+
+### Example Usage
+In this example, we will create a script that disables reputation gain for specific creatures based on their entry ID.
+
+```typescript
+const CREATURE_ENTRIES_TO_DISABLE_REP = [1234, 5678, 9012]; // Replace with actual entry IDs
+
+const OnCreatureCreate: creature_event_on_spawn = (event: number, creature: Creature) => {
+    const creatureEntry = creature.GetEntry();
+
+    if (CREATURE_ENTRIES_TO_DISABLE_REP.includes(creatureEntry)) {
+        creature.SetDisableReputationGain(true);
+        console.log(`Reputation gain disabled for creature with entry ID: ${creatureEntry}`);
+    }
+};
+
+const OnQuestComplete: player_event_on_quest_complete = (event: number, player: Player, quest: uint32) => {
+    const questCreature = player.GetQuestGiver();
+
+    if (questCreature && CREATURE_ENTRIES_TO_DISABLE_REP.includes(questCreature.GetEntry())) {
+        console.log(`Reputation gain disabled for quest giver with entry ID: ${questCreature.GetEntry()}`);
+        player.SendBroadcastMessage("You did not gain any reputation from this quest.");
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_SPAWN, (...args) => OnCreatureCreate(...args));
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_QUEST_COMPLETE, (...args) => OnQuestComplete(...args));
+```
+
+In this script:
+
+1. We define an array called `CREATURE_ENTRIES_TO_DISABLE_REP` that contains the entry IDs of the creatures for which we want to disable reputation gain.
+
+2. In the `OnCreatureCreate` event handler, we check if the spawned creature's entry ID is included in the `CREATURE_ENTRIES_TO_DISABLE_REP` array. If it is, we call the `SetDisableReputationGain` method with `true` to disable reputation gain for that creature. We also log a message to the console indicating that reputation gain has been disabled for that creature.
+
+3. In the `OnQuestComplete` event handler, we get the quest giver creature using `GetQuestGiver()`. If the quest giver is a creature and its entry ID is included in the `CREATURE_ENTRIES_TO_DISABLE_REP` array, we log a message to the console indicating that reputation gain has been disabled for the quest giver. We also send a broadcast message to the player informing them that they did not gain any reputation from completing the quest.
+
+4. Finally, we register the event handlers using `RegisterCreatureEvent` and `RegisterPlayerEvent` to ensure that the script is triggered at the appropriate times.
+
+This script provides a way to selectively disable reputation gain for specific creatures, either when they are killed or when they are involved in quest completion. This can be useful for balancing purposes or to create unique gameplay experiences.
+
+## SetEquipmentSlots
+This method equips the specified items to the creature's main hand, off hand, and ranged slots. Passing 0 as the item entry will remove any currently equipped item in that slot.
+
+### Parameters
+* main_hand: number - The item entry of the item to be equipped in the main hand slot, or 0 to remove the currently equipped item.
+* off_hand: number - The item entry of the item to be equipped in the off hand slot, or 0 to remove the currently equipped item.
+* ranged: number - The item entry of the item to be equipped in the ranged slot, or 0 to remove the currently equipped item.
+
+### Example Usage
+This example script demonstrates how to equip a creature with specific items based on its entry ID and level.
+
+```typescript
+const CREATURE_ENTRY = 1234;
+const MAIN_HAND_ITEM_ENTRY = 5678;
+const OFF_HAND_ITEM_ENTRY = 9012;
+const RANGED_ITEM_ENTRY = 3456;
+
+const onCreatureSpawn: creature_event_on_spawn = (event: number, creature: Creature) => {
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        const creatureLevel = creature.GetLevel();
+
+        let mainHandItem = MAIN_HAND_ITEM_ENTRY;
+        let offHandItem = OFF_HAND_ITEM_ENTRY;
+        let rangedItem = RANGED_ITEM_ENTRY;
+
+        if (creatureLevel < 10) {
+            mainHandItem = 0;
+            offHandItem = 0;
+            rangedItem = 0;
+        } else if (creatureLevel < 20) {
+            offHandItem = 0;
+            rangedItem = 0;
+        } else if (creatureLevel < 30) {
+            rangedItem = 0;
+        }
+
+        creature.SetEquipmentSlots(mainHandItem, offHandItem, rangedItem);
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_SPAWN, (...args) => onCreatureSpawn(...args));
+```
+
+In this example:
+1. We define constants for the creature entry and the desired item entries for each equipment slot.
+2. In the `onCreatureSpawn` event handler, we check if the spawned creature matches the desired entry.
+3. We determine the creature's level using `GetLevel()`.
+4. Based on the creature's level, we conditionally assign the item entries for each equipment slot. If the creature's level is below certain thresholds, we set the corresponding item entry to 0 to remove any equipped item.
+5. Finally, we call `SetEquipmentSlots` on the creature, passing the determined item entries for the main hand, off hand, and ranged slots.
+
+This script ensures that the creature is equipped with the appropriate items based on its level when it spawns. Lower-level creatures will have fewer or no items equipped, while higher-level creatures will have all three equipment slots filled.
+
+## SetHomePosition
+Sets the home position of the creature. This is the position the creature will return to when evading from combat or respawning.
+
+### Parameters
+* x: number - The X coordinate of the home position.
+* y: number - The Y coordinate of the home position.
+* z: number - The Z coordinate of the home position.
+* o: number - The orientation (facing angle) of the creature at the home position.
+
+### Example Usage
+Set a new home position for a creature when it reaches a certain health threshold.
+```typescript
+const LOW_HEALTH_PERCENTAGE = 0.2;
+
+const CreatureReachedLowHealth: creature_event_on_health_change = (event: number, creature: Creature, attacker: Unit) => {
+    const healthPct = creature.GetHealthPct();
+
+    if (healthPct <= LOW_HEALTH_PERCENTAGE) {
+        // Get the creature's current position
+        const currentX = creature.GetX();
+        const currentY = creature.GetY();
+        const currentZ = creature.GetZ();
+        const currentO = creature.GetO();
+
+        // Calculate a new home position at a fixed distance behind the current position
+        const distance = 20;
+        const angle = creature.GetO();
+        const newX = currentX - Math.cos(angle) * distance;
+        const newY = currentY - Math.sin(angle) * distance;
+        const newZ = currentZ;
+        const newO = currentO;
+
+        // Set the new home position
+        creature.SetHomePosition(newX, newY, newZ, newO);
+        creature.MonsterYell("I shall retreat and regroup!", 0);
+
+        // Evade from combat
+        creature.Evade();
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_HEALTH_CHANGE, (...args) => CreatureReachedLowHealth(...args));
+```
+In this example, when the creature's health drops below a certain percentage (`LOW_HEALTH_PERCENTAGE`), it calculates a new home position at a fixed distance behind its current position. The new home position is set using `SetHomePosition`, and then the creature evades from combat.
+
+By setting a new home position, the creature will return to that position when it respawns or evades from combat, instead of its original spawn location. This can be useful for creating dynamic behavior or adjusting the creature's positioning based on certain conditions during combat.
+
+## SetHover
+This method allows you to set whether a creature is hovering or levitating. By default, the creature will be set to hover. 
+
+### Parameters
+* enable: boolean (optional) - If set to true, the creature will hover. If set to false, the creature will not hover. If not provided, the creature will be set to hover.
+
+### Example Usage
+In this example, we have a script that will make all creatures within 100 yards of a player hover when the player enters the world. We will also set a timer to remove the hovering effect after 15 seconds.
+
+```typescript
+// Define a constant for the hover duration in milliseconds
+const HOVER_DURATION = 15000; // 15 seconds
+
+// Player enter world event handler
+const OnEnterWorld: player_event_on_enter_world = (event: number, player: Player) => {
+    // Get all creatures within 100 yards of the player
+    const creatures = player.GetCreaturesInRange(100);
+
+    // Loop through each creature and set them to hover
+    creatures.forEach((creature: Creature) => {
+        creature.SetHover(true);
+    });
+
+    // Set a timer to remove the hovering effect after the defined duration
+    player.RegisterTimedEvent(HOVER_DURATION, (eventId: number, delay: number, repeats: number, player: Player) => {
+        // Get all creatures within 100 yards of the player again
+        const creatures = player.GetCreaturesInRange(100);
+
+        // Loop through each creature and remove the hovering effect
+        creatures.forEach((creature: Creature) => {
+            creature.SetHover(false);
+        });
+    });
+};
+
+// Register the player enter world event
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_ENTER_WORLD, OnEnterWorld);
+```
+
+In this example, we first define a constant `HOVER_DURATION` to store the duration in milliseconds for how long the creatures should hover.
+
+We then create a handler function for the `PLAYER_EVENT_ON_ENTER_WORLD` event, which will be triggered whenever a player enters the world.
+
+Inside the handler function, we use the `GetCreaturesInRange` method of the `Player` object to get all creatures within 100 yards of the player. We then loop through each creature and call the `SetHover` method with `true` as the argument to make them hover.
+
+Next, we use the `RegisterTimedEvent` method of the `Player` object to set a timer that will be triggered after the specified `HOVER_DURATION`. In the timer callback function, we again get all creatures within 100 yards of the player and loop through each one, calling the `SetHover` method with `false` as the argument to remove the hovering effect.
+
+Finally, we register the `OnEnterWorld` handler function to the `PLAYER_EVENT_ON_ENTER_WORLD` event using the `RegisterPlayerEvent` function.
+
+With this script, whenever a player enters the world, all creatures within 100 yards of them will start hovering, and after 15 seconds, the hovering effect will be removed.
+
+## SetInCombatWithZone
+Sets the creature in combat with all players in the same dungeon instance. This is commonly used by raid bosses to prevent players from using out-of-combat actions once the encounter has begun.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+This method does not return any values.
+
+### Example Usage
+This example demonstrates how to use `SetInCombatWithZone()` in a script for a raid boss encounter. When a player enters the boss's room, the boss will set itself in combat with all players in the instance, preventing them from using out-of-combat actions.
+
+```typescript
+const BOSS_ROOM_AREA_ID = 1234;
+const BOSS_ENTRY = 5678;
+
+let bossEngaged = false;
+
+const OnAreaTrigger = (event: number, player: Player, areaTrigger: AreaTrigger): void => {
+    if (areaTrigger.GetAreaId() === BOSS_ROOM_AREA_ID && !bossEngaged) {
+        const boss = player.GetMap().GetCreatureByEntry(BOSS_ENTRY);
+        if (boss) {
+            boss.SetInCombatWithZone();
+            bossEngaged = true;
+            
+            // Announce the encounter start to all players in the instance
+            const instance = player.GetMap();
+            instance.PlayDirectSoundToMap(1234); // Play a sound effect
+            instance.SendWorldText("The battle against the mighty boss has begun!");
+            
+            // Spawn additional adds to assist the boss
+            const spawnPos = boss.GetPosition();
+            for (let i = 0; i < 4; i++) {
+                instance.SpawnCreature(1122, spawnPos.x + i * 2, spawnPos.y, spawnPos.z, spawnPos.o);
+            }
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_AREA_TRIGGER, OnAreaTrigger);
+```
+
+In this example:
+1. When a player enters the boss room (defined by `BOSS_ROOM_AREA_ID`), the script checks if the boss has already been engaged.
+2. If the boss is not engaged, the script retrieves the boss creature using `GetCreatureByEntry()`.
+3. If the boss is found, `SetInCombatWithZone()` is called, setting the boss in combat with all players in the instance.
+4. The `bossEngaged` flag is set to `true` to prevent the boss from being engaged multiple times.
+5. The script announces the start of the encounter to all players in the instance using `SendWorldText()` and plays a sound effect using `PlayDirectSoundToMap()`.
+6. Additional creature adds are spawned to assist the boss using `SpawnCreature()`.
+
+This example showcases how `SetInCombatWithZone()` can be used in conjunction with other methods to create an immersive and challenging raid boss encounter.
+
+## SetLootMode
+Set the loot mode for the creature. This controls how loot is generated and distributed when the creature dies.
+
+### Parameters
+None
+
+### Returns
+None
+
+### Example Usage
+This example demonstrates setting the loot mode for a specific creature to personal loot, which means each player will receive their own loot based on their own chances, rather than the group rolling for items.
+
+```typescript
+const CREATURE_ENTRY_ONYXIA = 10184;
+
+const onCreatureSpawn: creature_event_on_spawn = (event: number, creature: Creature) => {
+    if (creature.GetEntry() === CREATURE_ENTRY_ONYXIA) {
+        creature.SetLootMode(3); // Set loot mode to personal loot (3)
+        creature.SendUnitWhisper("Onyxia's loot mode has been set to personal loot. Each player will receive their own loot based on their chances.", 0, true);
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_SPAWN, (...args) => onCreatureSpawn(...args));
+```
+
+In this example:
+1. We define the entry ID for Onyxia as a constant `CREATURE_ENTRY_ONYXIA`.
+2. We register a `CREATURE_EVENT_ON_SPAWN` event handler using `RegisterCreatureEvent`.
+3. Inside the event handler, we check if the spawned creature's entry matches Onyxia's entry ID.
+4. If it is Onyxia, we call `SetLootMode(3)` on the creature, which sets the loot mode to personal loot (mode 3).
+5. We also send a whisper message to all players (by passing 0 as the player receiver) indicating that Onyxia's loot mode has been set to personal loot.
+
+This ensures that whenever Onyxia spawns, her loot mode is automatically set to personal loot, providing a fair distribution of loot among the players participating in the encounter.
+
+Note: The available loot modes and their corresponding values may vary depending on the specific game version and configuration of AzerothCore. Make sure to refer to the relevant documentation or source code to determine the appropriate loot mode values for your setup.
+
+## SetNPCFlags
+This method sets the NPC flags of the creature. NPC flags determine how the creature interacts with players, such as whether it can be targeted, attacked, or interacted with. You can find a list of NPC flag values in the `CreatureTemplate.npcflag` field of the `creature_template` table in the AzerothCore database.
+
+### Parameters
+- `flags`: number - The new NPC flag value to set for the creature.
+
+### Example Usage
+In this example, we create a custom NPC that can be targeted and attacked by players, but only during a specific event that occurs at certain times.
+
+```typescript
+const CUSTOM_NPC_ENTRY = 100000;
+const EVENT_NPC_FLAG = 2; // Targetable, but not attackable
+const NORMAL_NPC_FLAG = 0; // Not targetable or attackable
+
+let isEventActive = false;
+
+function onEventStart(eventId: number) {
+    // Assuming eventId is the ID of our custom event
+    if (eventId === 123) {
+        isEventActive = true;
+
+        // Find all custom NPCs in the world and set their flags to be targetable
+        const npcs = GetCreaturesInWorld(CUSTOM_NPC_ENTRY);
+        for (const npc of npcs) {
+            npc.SetNPCFlags(EVENT_NPC_FLAG);
+        }
+    }
+}
+
+function onEventStop(eventId: number) {
+    // Assuming eventId is the ID of our custom event
+    if (eventId === 123) {
+        isEventActive = false;
+
+        // Find all custom NPCs in the world and set their flags to be non-targetable
+        const npcs = GetCreaturesInWorld(CUSTOM_NPC_ENTRY);
+        for (const npc of npcs) {
+            npc.SetNPCFlags(NORMAL_NPC_FLAG);
+        }
+    }
+}
+
+function onCreatureClick(event: CreatureClickEvents, player: Player, creature: Creature) {
+    if (creature.GetEntry() === CUSTOM_NPC_ENTRY && isEventActive) {
+        // Handle interaction with the custom NPC during the event
+        creature.MonsterSay("The event is active! You can target and attack me now.", 0);
+    }
+}
+
+RegisterServerEvent(ServerEvents.EVENT_START, onEventStart);
+RegisterServerEvent(ServerEvents.EVENT_STOP, onEventStop);
+RegisterCreatureEvent(CreatureEvents.CREATURE_ON_CLICK, onCreatureClick);
+```
+
+In this script:
+1. We define constants for our custom NPC entry and the flag values for the event and normal states.
+2. We create a variable `isEventActive` to track whether the event is currently active.
+3. In the `onEventStart` function, we check if the event ID matches our custom event. If so, we set `isEventActive` to `true` and find all instances of our custom NPC in the world using `GetCreaturesInWorld`. We then set their NPC flags to `EVENT_NPC_FLAG` using `SetNPCFlags`, making them targetable but not attackable.
+4. In the `onEventStop` function, we perform similar steps but set the NPC flags back to `NORMAL_NPC_FLAG`, making them non-targetable and non-attackable.
+5. In the `onCreatureClick` function, we handle the interaction with the custom NPC when it is clicked by a player during the active event. We make the NPC say a message indicating that it can now be targeted and attacked.
+
+This example demonstrates how you can use `SetNPCFlags` to dynamically change the behavior of creatures based on certain conditions or events in your game world.
+

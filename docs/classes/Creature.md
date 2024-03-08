@@ -4593,3 +4593,125 @@ In this script:
 
 This example demonstrates how you can use `SetNPCFlags` to dynamically change the behavior of creatures based on certain conditions or events in your game world.
 
+## SetNoCallAssistance
+This method allows you to control whether a creature will call for help from nearby friendly creatures when it enters combat. By default, creatures will call for assistance when they aggro a player or are attacked. This method allows you to override that behavior.
+
+### Parameters
+enable: boolean (optional) - If set to true, the creature will not call for assistance. If set to false, the creature will call for assistance (default behavior).
+
+### Example Usage
+Disable call for assistance on a specific creature entry:
+```typescript
+const CREATURE_ENTRY = 1234;
+
+const DisableCallForHelp = (): void => {
+    const creatures = GetCreaturesInWorld(CREATURE_ENTRY);
+
+    for (const creature of creatures) {
+        creature.SetNoCallAssistance(true);
+    }
+};
+
+RegisterServerEvent(ServerEvents.SERVER_EVENT_ON_CREATURE_SPAWN, (event, creature) => {
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        creature.SetNoCallAssistance(true);
+    }
+});
+
+DisableCallForHelp();
+```
+
+In this example, we define a constant `CREATURE_ENTRY` with the entry ID of the creature we want to modify. We then create a function `DisableCallForHelp` that retrieves all creatures in the world with the specified entry using `GetCreaturesInWorld`. We iterate over each creature and call `SetNoCallAssistance(true)` to disable the call for assistance behavior.
+
+Additionally, we register a server event `SERVER_EVENT_ON_CREATURE_SPAWN` to set the call for assistance behavior whenever a creature with the specified entry spawns. This ensures that even if the creature respawns, it will still have the modified behavior.
+
+Finally, we call the `DisableCallForHelp` function to apply the changes to all existing creatures with the specified entry.
+
+By using this method, you can fine-tune the behavior of specific creatures, making them more challenging or altering their mechanics to fit your desired gameplay experience. Keep in mind that modifying the call for assistance behavior may impact the balance and difficulty of encounters, so use it judiciously.
+
+## SetNoSearchAssistance
+This method allows you to control whether the creature will search for assistance from nearby friendly creatures when its health falls below a certain threshold. By default, most creatures in the game will seek assistance when they are at low health. This can be disabled or re-enabled using this method.
+
+### Parameters
+- `enable`: boolean (optional) - If set to `true`, the creature will not search for assistance. If set to `false` or omitted, the creature will search for assistance (default behavior).
+
+### Example Usage
+In this example, we have a custom boss creature that summons adds at certain health thresholds. We want to prevent the boss from calling for assistance when it reaches low health, as it would make the encounter too difficult. We can use the `SetNoSearchAssistance` method to achieve this.
+
+```typescript
+const BOSS_ENTRY = 12345;
+const ADD_ENTRY = 54321;
+
+const SUMMON_ADDS_THRESHOLD_1 = 75;
+const SUMMON_ADDS_THRESHOLD_2 = 50;
+const SUMMON_ADDS_THRESHOLD_3 = 25;
+
+const ADDS_COUNT = 2;
+
+const BossAI: creature_ai = (creature: Creature): void => {
+    creature.SetNoSearchAssistance(true); // Disable assistance searching for the boss
+
+    creature.RegisterEvent(CreatureEvents.CREATURE_EVENT_ON_HEALTH_PCT, (creature, healthPct) => {
+        switch (healthPct) {
+            case SUMMON_ADDS_THRESHOLD_1:
+            case SUMMON_ADDS_THRESHOLD_2:
+            case SUMMON_ADDS_THRESHOLD_3:
+                for (let i = 0; i < ADDS_COUNT; i++) {
+                    creature.SummonCreature(ADD_ENTRY, creature.GetPositionX(), creature.GetPositionY(), creature.GetPositionZ(), creature.GetOrientation(), 3, 0);
+                }
+                break;
+        }
+    });
+};
+
+RegisterCreatureAI(BOSS_ENTRY, BossAI);
+```
+
+In this script, we first disable the assistance searching for the boss creature using `SetNoSearchAssistance(true)`. This ensures that the boss will not call for help from nearby friendly creatures when its health drops low.
+
+Then, we register an event handler for the `CREATURE_EVENT_ON_HEALTH_PCT` event, which triggers whenever the creature's health reaches certain percentage thresholds. Inside the event handler, we check the health percentage and summon adds using the `SummonCreature` method when the boss reaches 75%, 50%, and 25% health.
+
+By using `SetNoSearchAssistance`, we can fine-tune the behavior of the boss creature and create a more controlled and balanced encounter for players.
+
+## SetRespawnDelay
+This method sets the time it takes for the [Creature] to respawn when killed. The respawn delay is in seconds.
+
+### Parameters
+* delay: number - The delay in seconds for the creature to respawn.
+
+### Example Usage
+Set a custom respawn time for a specific creature based on its entry ID.
+```typescript
+const CREATURE_ENTRY_YSONDRE = 14887;
+const RESPAWN_DELAY_YSONDRE = 3600; // 1 hour
+
+const CreatureOnDeath: creature_event_on_died = (event: number, creature: Creature, killer: Unit) => {
+    if (creature.GetEntry() === CREATURE_ENTRY_YSONDRE) {
+        creature.SetRespawnDelay(RESPAWN_DELAY_YSONDRE);
+        
+        // Notify players about the custom respawn time
+        const message = `Ysondre will respawn in ${RESPAWN_DELAY_YSONDRE / 60} minutes.`;
+        for (const [_, player] of world.GetPlayers()) {
+            if (player.GetMapId() === creature.GetMapId()) {
+                player.SendBroadcastMessage(message);
+            }
+        }
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_DIED, (...args) => CreatureOnDeath(...args));
+```
+
+In this example:
+1. We define constants for the creature entry ID of Ysondre and the desired respawn delay in seconds.
+2. In the `CreatureOnDeath` event handler, we check if the died creature's entry matches Ysondre's entry ID.
+3. If it's Ysondre, we set the custom respawn delay using `SetRespawnDelay()`.
+4. We calculate the respawn time in minutes by dividing the delay by 60.
+5. We prepare a broadcast message informing players about the custom respawn time.
+6. We iterate over all players in the world using `world.GetPlayers()`.
+7. For each player, we check if they are on the same map as Ysondre using `GetMapId()`.
+8. If the player is on the same map, we send them the broadcast message using `SendBroadcastMessage()`.
+9. Finally, we register the `CreatureOnDeath` event handler for the `CREATURE_EVENT_ON_DIED` event using `RegisterCreatureEvent()`.
+
+This script sets a custom respawn delay for Ysondre when she is killed and notifies players on the same map about the respawn time. It provides a more engaging experience for players by giving them information about when they can expect to encounter Ysondre again.
+

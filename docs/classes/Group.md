@@ -660,3 +660,168 @@ If the group is not a battleground group, it performs different actions suitable
 
 This example showcases how the `IsBGGroup()` method can be used to differentiate between battleground groups and regular groups, allowing you to implement different behaviors and functionalities based on the group type.
 
+## IsFull
+The `IsFull()` method checks if the group is currently full, meaning it has reached the maximum number of members allowed in the group.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+- `boolean` - Returns `true` if the group is full, `false` otherwise.
+
+### Example Usage
+Here's an example of how to use the `IsFull()` method to check if a group is full before inviting a player to join:
+
+```typescript
+const MAX_GROUP_SIZE = 5;
+
+const onInviteToGroup: player_event_on_invite_to_group = (event: number, player: Player, group: Group): void => {
+    if (!group) {
+        // Create a new group if the player is not in one
+        group = new Group();
+        player.SetGroup(group);
+    }
+
+    if (group.IsFull()) {
+        player.SendBroadcastMessage("Sorry, the group is already full.");
+        return;
+    }
+
+    // Invite the player to the group
+    group.AddMember(player);
+
+    // Notify the group members
+    group.SendPacket(`${player.GetName()} has joined the group.`);
+
+    // If the group becomes full after adding the player, announce it
+    if (group.IsFull()) {
+        group.SendPacket("The group is now full!");
+
+        // Optionally, you can start a group activity or quest
+        const questId = 1234; // Replace with the desired quest ID
+        if (group.GetMembersCount() === MAX_GROUP_SIZE && !group.HasQuest(questId)) {
+            group.AddQuest(questId);
+            group.SendPacket(`Quest ${questId} has been added to the group.`);
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_INVITE_TO_GROUP, (...args) => onInviteToGroup(...args));
+```
+
+In this example:
+1. When a player is invited to a group, the script first checks if the player is already in a group. If not, it creates a new group and sets the player's group.
+
+2. The script then uses the `IsFull()` method to check if the group is already full. If it is, it sends a message to the player indicating that the group is full and returns.
+
+3. If the group is not full, the player is added to the group using the `AddMember()` method.
+
+4. The script notifies all group members that the player has joined the group.
+
+5. After adding the player, the script checks again if the group has become full using `IsFull()`. If it has, it announces to the group that it is now full.
+
+6. Optionally, if the group size reaches the maximum size (`MAX_GROUP_SIZE`) and the group doesn't have a specific quest, the script adds the quest to the group using `AddQuest()` and notifies the group members.
+
+This example demonstrates how to use the `IsFull()` method in combination with other group-related methods to manage group membership and perform actions based on the group's state.
+
+## IsLeader
+Returns whether the specified player is the leader of the group.
+
+### Parameters
+* guid: number - The GUID of the player to check.
+
+### Returns
+* boolean - True if the specified player is the group leader, false otherwise.
+
+### Example Usage
+This example demonstrates how to check if a player is the leader of their group when they enter a specific area, and if so, grant them a special item.
+
+```typescript
+const AREA_ID = 1234; // Replace with the desired area ID
+const ITEM_ENTRY = 5678; // Replace with the desired item entry
+
+const onAreaTrigger: player_event_on_area_trigger = (event: number, player: Player, triggerId: number): void => {
+    if (triggerId === AREA_ID) {
+        const group = player.GetGroup();
+        if (group) {
+            const isLeader = group.IsLeader(player.GetGUID());
+            if (isLeader) {
+                const item = player.AddItem(ITEM_ENTRY, 1);
+                if (item) {
+                    player.SendBroadcastMessage("As the leader of your group, you have been granted a special item!");
+                } else {
+                    player.SendBroadcastMessage("Your inventory is full. Unable to grant the special item.");
+                }
+            }
+        } else {
+            player.SendBroadcastMessage("You must be in a group to receive the special item.");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_AREA_TRIGGER, (...args) => onAreaTrigger(...args));
+```
+
+In this example:
+1. We define the desired area ID (`AREA_ID`) and the item entry (`ITEM_ENTRY`) that we want to grant to the group leader.
+2. We register the `PLAYER_EVENT_ON_AREA_TRIGGER` event to listen for when a player enters a specific area.
+3. When the event is triggered, we check if the triggered area ID matches the desired area ID.
+4. If the player is in the specified area, we retrieve their group using `player.GetGroup()`.
+5. If the player is in a group, we use `group.IsLeader(player.GetGUID())` to check if the player is the leader of the group.
+6. If the player is the group leader, we attempt to add the special item to their inventory using `player.AddItem(ITEM_ENTRY, 1)`.
+   - If the item is successfully added, we send a broadcast message to the player indicating that they have received the special item.
+   - If the player's inventory is full, we send a broadcast message informing them that the item could not be granted.
+7. If the player is not in a group, we send a broadcast message indicating that they must be in a group to receive the special item.
+
+This example showcases how to use the `IsLeader` method to determine if a player is the leader of their group and perform specific actions based on that information, such as granting a special item or sending customized messages.
+
+## IsMember
+The `IsMember` method checks if a player is a member of the group by their GUID (Globally Unique Identifier).
+
+### Parameters
+* guid: number - The GUID of the player to check for membership.
+
+### Returns
+* boolean - Returns `true` if the player with the specified GUID is a member of the group, `false` otherwise.
+
+### Example Usage
+In this example, we have a script that listens for the `PLAYER_EVENT_ON_CHAT` event. When a player sends a message starting with "!checkMember", the script will check if the specified player is a member of the sender's group.
+
+```typescript
+const onChat: player_event_on_chat = (event: number, player: Player, msg: string, type: number, lang: Language): void => {
+    if (msg.startsWith("!checkMember")) {
+        const targetName = msg.substring(13); // Extract the target player's name
+        const targetPlayer = GetPlayerByName(targetName);
+
+        if (targetPlayer) {
+            const group = player.GetGroup();
+
+            if (group) {
+                if (group.IsMember(targetPlayer.GetGUID())) {
+                    player.SendBroadcastMessage(`${targetName} is a member of your group.`);
+                } else {
+                    player.SendBroadcastMessage(`${targetName} is not a member of your group.`);
+                }
+            } else {
+                player.SendBroadcastMessage("You are not in a group.");
+            }
+        } else {
+            player.SendBroadcastMessage(`Player '${targetName}' not found.`);
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_CHAT, (...args) => onChat(...args));
+```
+
+In this script:
+1. We check if the player's message starts with "!checkMember".
+2. If it does, we extract the target player's name from the message.
+3. We attempt to find the target player using `GetPlayerByName`.
+4. If the target player is found, we get the sender's group using `player.GetGroup()`.
+5. If the sender is in a group, we use `group.IsMember(targetPlayer.GetGUID())` to check if the target player is a member of that group.
+6. We send a broadcast message to the sender indicating whether the target player is a member of their group or not.
+7. If the sender is not in a group or the target player is not found, we send appropriate messages to the sender.
+
+This script allows players to quickly check if another player is a member of their group by sending a message in the chat with the format "!checkMember PlayerName".
+

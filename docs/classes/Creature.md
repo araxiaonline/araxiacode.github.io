@@ -1709,3 +1709,307 @@ Once the creature is in combat, we check the cooldown of the specified spell usi
 
 By using `GetCreatureSpellCooldownDelay()`, we can ensure that the creature is only casting the spell when it is off cooldown, preventing the creature from spamming the spell and making the encounter more balanced.
 
+## GetCurrentWaypointId
+Returns the current waypoint ID of the creature if it's moving along a predefined path. Waypoints are defined in the `waypoint_data` table in the world database. Each waypoint has a unique ID, and this method returns the ID of the waypoint the creature is currently moving towards.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+* number - The ID of the current waypoint, or 0 if the creature is not moving along a waypoint path.
+
+### Example Usage
+In this example, we create a script that monitors a creature's movement along a waypoint path. When the creature reaches specific waypoints, it performs certain actions or emotes.
+
+```typescript
+const CREATURE_ENTRY = 12345;
+const WAYPOINT_DANCE = 10;
+const WAYPOINT_SALUTE = 20;
+const WAYPOINT_ROAR = 30;
+
+const OnCreatureUpdate: creature_event_on_update = (event: number, creature: Creature, diff: number) => {
+    const currentWaypointId = creature.GetCurrentWaypointId();
+
+    switch (currentWaypointId) {
+        case WAYPOINT_DANCE:
+            creature.PerformEmote(EmoteType.EMOTE_ONESHOT_DANCE);
+            break;
+        case WAYPOINT_SALUTE:
+            creature.PerformEmote(EmoteType.EMOTE_ONESHOT_SALUTE);
+            creature.SendUnitSay("Greetings, travelers!", ChatMsg.CHAT_MSG_MONSTER_SAY, 0);
+            break;
+        case WAYPOINT_ROAR:
+            creature.PerformEmote(EmoteType.EMOTE_ONESHOT_ROAR);
+            creature.CastSpell(creature, 12345, true);
+            break;
+        default:
+            break;
+    }
+};
+
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_UPDATE, OnCreatureUpdate);
+```
+
+In this script:
+1. We define constants for the creature entry and specific waypoint IDs where we want the creature to perform actions.
+2. We register a `CREATURE_EVENT_ON_UPDATE` event for the specified creature entry.
+3. In the event handler, we retrieve the current waypoint ID using `creature.GetCurrentWaypointId()`.
+4. We use a `switch` statement to check the current waypoint ID against the predefined waypoint constants.
+5. Depending on the waypoint ID, the creature performs different actions:
+   - At `WAYPOINT_DANCE`, the creature performs a dance emote.
+   - At `WAYPOINT_SALUTE`, the creature performs a salute emote and sends a greeting message.
+   - At `WAYPOINT_ROAR`, the creature performs a roar emote and casts a spell on itself.
+6. If the current waypoint ID doesn't match any of the specified waypoints, no action is taken.
+
+This script demonstrates how you can use `GetCurrentWaypointId()` to track a creature's movement along a waypoint path and trigger specific actions at designated waypoints. You can extend this script to include more waypoints and perform different actions based on your specific requirements.
+
+## GetDBTableGUIDLow
+Returns the database guid (low guid) for the creature.  This ID comes from the `creature` table and is the `guid` column that is used as the primary key.  This value can be used to manipulate or lookup the creature in the `creature` database table. 
+
+### Parameters
+None
+
+### Returns
+guid: number - The low guid of the creature from the `creature` table
+
+### Example Usage
+Lets say that we want to create an NPC that will remember if a player has interacted with them before.  We will use the low guid from the creature table to store a flag on the player to indicate that they have interacted with this NPC before.  
+
+```typescript
+// Create a new gossip for the creature
+const GOSSIP_MENU_ID = 60000;
+const GOSSIP_NPC_TEXT_ID = 100000;
+
+const ACCreature: CreatureScript = new CreatureScript("ACCreature","gossip_npc_remember_me");
+
+class GossipNPC_TS extends ACCreature.Creature {   
+
+    hasInteractedWithPlayer(player: Player): boolean {
+        return player.HasFlag(PlayerFlags.CUSTOM_FLAG_INTERACTED_WITH_NPC, this.GetDBTableGUIDLow());        
+    }
+
+    OnGossipHello(player: Player) {               
+        if(!this.hasInteractedWithPlayer(player)) {            
+            player.GossipMenuAddItem(GOSSIP_MENU_ID, 0, "Hello, I don't think we have met before.", 1, 1);
+        } else {
+            player.GossipMenuAddItem(GOSSIP_MENU_ID, 0, "Hello again, thanks for stopping by!", 1, 1);
+        }
+                
+        player.GossipSendMenu(GOSSIP_NPC_TEXT_ID, this.obj, GOSSIP_MENU_ID);
+    }
+
+    OnGossipSelect(player: Player, menuId: number, option: number) {
+        if(menuId == GOSSIP_MENU_ID && option == 1) {
+            player.SetFlag(PlayerFlags.CUSTOM_FLAG_INTERACTED_WITH_NPC, this.GetDBTableGUIDLow());
+            player.GossipComplete();
+        }        
+    }
+
+}
+
+const onLowGuidNPC = () => new GossipNPC_TS();
+ACCreature.register(onLowGuidNPC, 190010, "npc_remember_me");
+```
+
+In this example, we create a new gossip NPC that will remember if a player has interacted with them before by using a custom flag on the player that stores the low guid of the creature.  When the player first interacts with the NPC, they will see a different message than if they have already interacted with the NPC before.  
+
+We use the `GetDBTableGUIDLow()` method to get the low guid of the creature, which we then use to set a custom flag on the player using `player.SetFlag()`. This flag is checked in the `hasInteractedWithPlayer()` method to determine if the player has interacted with this NPC before.
+
+## GetDefaultMovementType
+Returns the default movement type for this [Creature]. This method can be useful when you want to determine how a creature should move by default, and then make decisions based on that information.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+[MovementGeneratorType](./movementgeneratortype.md) - The default movement type of the creature.
+
+### Example Usage
+In this example, we'll create a script that changes a creature's movement type based on its default movement type and the time of day in the game world.
+
+```typescript
+const CREATURE_ENTRY = 1234;
+const MORNING_START = 6; // 6 AM
+const EVENING_START = 18; // 6 PM
+
+const UpdateCreatureMovement: creature_event_on_update = (event: number, creature: Creature, diff: number): void => {
+    const currentHour = creature.GetMap().GetGameTime() / 60; // Convert minutes to hours
+
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        const defaultMovementType = creature.GetDefaultMovementType();
+
+        if (currentHour >= MORNING_START && currentHour < EVENING_START) {
+            // During the day (6 AM to 6 PM)
+            if (defaultMovementType === MovementGeneratorType.IDLE_MOTION_TYPE) {
+                creature.SetWalk(false); // Set creature to run
+                creature.GetMotionMaster().MoveRandom(10, 5); // Move randomly within a 10-yard radius, with a 5-second delay between movements
+            } else if (defaultMovementType === MovementGeneratorType.RANDOM_MOTION_TYPE) {
+                creature.GetMotionMaster().MoveTargetedHome(); // Move the creature back to its spawn point
+            }
+        } else {
+            // During the night (6 PM to 6 AM)
+            if (defaultMovementType === MovementGeneratorType.IDLE_MOTION_TYPE) {
+                creature.SetWalk(true); // Set creature to walk
+                creature.GetMotionMaster().MovePath(CREATURE_ENTRY * 100, true); // Move along a predefined path (path ID is calculated based on the creature entry)
+            } else if (defaultMovementType === MovementGeneratorType.RANDOM_MOTION_TYPE) {
+                creature.GetMotionMaster().MoveIdle(); // Stop the creature's movement
+            }
+        }
+    }
+};
+
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_UPDATE, (...args) => UpdateCreatureMovement(...args));
+```
+
+In this script, we first determine the current hour in the game world by converting the game time (in minutes) to hours. Then, we check if the creature's entry matches the one we're interested in (CREATURE_ENTRY).
+
+If it's daytime (between 6 AM and 6 PM), we check the creature's default movement type. If it's IDLE_MOTION_TYPE, we set the creature to run and move randomly within a 10-yard radius, with a 5-second delay between movements. If the default movement type is RANDOM_MOTION_TYPE, we move the creature back to its spawn point.
+
+During the night (between 6 PM and 6 AM), if the default movement type is IDLE_MOTION_TYPE, we set the creature to walk and move along a predefined path (the path ID is calculated based on the creature entry). If the default movement type is RANDOM_MOTION_TYPE, we stop the creature's movement by calling MoveIdle().
+
+This example demonstrates how you can use the GetDefaultMovementType() method to make decisions based on a creature's default movement behavior and create dynamic scripts that change creature behavior based on various conditions, such as the time of day.
+
+## GetExtraFlags
+Returns the extra flags for the creature. Extra flags are used to control various attributes and behaviors of the creature, such as whether it is a civilian, uses pathfinding, is a guard, and more.
+
+### Parameters
+None
+
+### Returns
+* `number` - The extra flags of the creature.
+
+### Example Usage
+```typescript
+// Define the creature entry to check
+const CREATURE_ENTRY = 1234;
+
+// Event handler for creature spawn
+const OnCreatureSpawn: creature_event_on_spawn = (event: CreatureEvents, creature: Creature, killer: Unit) => {
+    // Check if the spawned creature matches the desired entry
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        // Get the creature's extra flags
+        const extraFlags = creature.GetExtraFlags();
+
+        // Check if the creature is a civilian
+        if ((extraFlags & CreatureExtraFlags.CREATURE_FLAG_EXTRA_CIVILIAN) !== 0) {
+            console.log("The creature is a civilian.");
+        }
+
+        // Check if the creature uses pathfinding
+        if ((extraFlags & CreatureExtraFlags.CREATURE_FLAG_EXTRA_NO_PARRY) !== 0) {
+            console.log("The creature uses pathfinding.");
+        }
+
+        // Check if the creature is a guard
+        if ((extraFlags & CreatureExtraFlags.CREATURE_FLAG_EXTRA_GUARD) !== 0) {
+            console.log("The creature is a guard.");
+        }
+
+        // Add more checks for other extra flags as needed
+    }
+};
+
+// Register the creature spawn event
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_SPAWN, OnCreatureSpawn);
+```
+
+In this example, we define a constant `CREATURE_ENTRY` to specify the entry of the creature we want to check. We then register a creature spawn event using `RegisterCreatureEvent` and provide the `OnCreatureSpawn` event handler.
+
+Inside the event handler, we first check if the spawned creature's entry matches the desired entry using `creature.GetEntry()`. If there is a match, we retrieve the creature's extra flags using `creature.GetExtraFlags()`.
+
+We then perform various checks on the extra flags using bitwise operations to determine specific attributes of the creature. In this example, we check if the creature is a civilian, uses pathfinding, or is a guard by comparing the extra flags with the corresponding flag values defined in the `CreatureExtraFlags` enum.
+
+You can add more checks for other extra flags based on your specific requirements. The extra flags provide a way to control and identify various behaviors and attributes of creatures in the game.
+
+Note: Make sure to replace `CreatureExtraFlags` with the actual enum or constant values defined in your mod-eluna or AzerothCore environment.
+
+## GetHomePosition
+Returns the home position of the creature as a set of coordinates (x, y, z, o). The home position is the position the creature returns to when evading from combat or respawning.
+
+### Parameters
+None
+
+### Returns
+An array of four numbers representing the coordinates:
+- `x`: The X-coordinate of the creature's home position.
+- `y`: The Y-coordinate of the creature's home position.
+- `z`: The Z-coordinate (height) of the creature's home position.
+- `o`: The orientation (facing angle) of the creature at its home position, in radians.
+
+### Example Usage
+Create a custom creature script that teleports the creature to a random position within a certain range of its home position when it is engaged in combat.
+```typescript
+const CUSTOM_CREATURE_ENTRY = 100001;
+const TELEPORT_RANGE = 10; // 10 yards
+
+const OnEnterCombat: creature_event_on_enter_combat = (event: number, creature: Creature, target: Unit): void => {
+    const [homeX, homeY, homeZ, homeO] = creature.GetHomePosition();
+
+    // Calculate random offset within the specified range
+    const randomOffsetX = Math.random() * TELEPORT_RANGE * 2 - TELEPORT_RANGE;
+    const randomOffsetY = Math.random() * TELEPORT_RANGE * 2 - TELEPORT_RANGE;
+
+    // Calculate the new position based on the home position and random offset
+    const newX = homeX + randomOffsetX;
+    const newY = homeY + randomOffsetY;
+    const newZ = homeZ;
+
+    // Teleport the creature to the new position
+    creature.NearTeleport(newX, newY, newZ, homeO);
+
+    // Send a message to nearby players
+    creature.SendUnitYell("I will not be defeated easily!", 0);
+};
+
+RegisterCreatureEvent(CUSTOM_CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_ENTER_COMBAT, (...args) => OnEnterCombat(...args));
+```
+In this example, when the custom creature with the specified entry ID enters combat, it will be teleported to a random position within a range of 10 yards from its home position. The script calculates the random offset based on the `TELEPORT_RANGE` constant and adds it to the home position coordinates obtained using `GetHomePosition()`. The creature is then teleported to the new position using `NearTeleport()`, maintaining its original orientation. Finally, the creature sends a yell message to nearby players.
+
+This script can be useful for creating more dynamic and challenging encounters where the creature actively tries to reposition itself during combat.
+
+## GetLootMode
+Returns the current loot mode for the creature. The loot mode determines how the creature's loot is distributed among players.
+
+### Parameters
+None
+
+### Returns
+string - The current loot mode of the creature. Possible values are:
+- "LOOT_MODE_DEFAULT": The default loot mode, where loot is distributed based on the group's loot method.
+- "LOOT_MODE_HARD_MODE_1": A special loot mode used for hard mode encounters, providing additional or enhanced loot.
+- "LOOT_MODE_HARD_MODE_2": Another special loot mode for even more challenging hard mode encounters.
+- "LOOT_MODE_HARD_MODE_3": The highest difficulty loot mode for the most demanding hard mode encounters.
+- "LOOT_MODE_HARD_MODE_4": An extra hard mode loot mode for exceptionally difficult encounters.
+
+### Example Usage
+```typescript
+const BOSS_ENTRY = 12345;
+const HARD_MODE_LOOT = "LOOT_MODE_HARD_MODE_2";
+
+const CheckBossLootMode: creature_event_on_just_summoned = (event: number, creature: Creature, summoner: WorldObject) => {
+    if (creature.GetEntry() === BOSS_ENTRY) {
+        const lootMode = creature.GetLootMode();
+        if (lootMode === HARD_MODE_LOOT) {
+            // Announce to the raid that the boss is in hard mode
+            creature.SendChatMessage(CHAT_MSG_RAID_BOSS_EMOTE, 0, "The boss is now in hard mode! Prepare for a challenging fight!");
+
+            // Increase the boss's health and damage for hard mode
+            creature.SetMaxHealth(creature.GetMaxHealth() * 1.5);
+            creature.SetHealth(creature.GetMaxHealth());
+            creature.SetDamageModifier(1.25);
+
+            // Apply a visual effect to indicate hard mode
+            creature.CastSpell(creature, SPELL_HARD_MODE_AURA, true);
+        } else {
+            // Announce that the boss is in normal mode
+            creature.SendChatMessage(CHAT_MSG_RAID_BOSS_EMOTE, 0, "The boss is in normal mode. Fight well!");
+        }
+    }
+};
+
+RegisterCreatureEvent(BOSS_ENTRY, CreatureEvents.CREATURE_EVENT_ON_JUST_SUMMONED, CheckBossLootMode);
+```
+In this example, when the boss creature is summoned, the script checks its loot mode using `GetLootMode()`. If the loot mode is set to `HARD_MODE_LOOT`, it announces to the raid that the boss is in hard mode, increases the boss's health and damage, and applies a visual effect to indicate the hard mode. If the loot mode is not set to `HARD_MODE_LOOT`, it announces that the boss is in normal mode.
+
+This allows the raid to prepare accordingly based on the difficulty of the encounter and the expected loot rewards.
+

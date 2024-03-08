@@ -2,8 +2,8 @@
 - Eluna Typescript
     - Getting Started
     - Configuration    
-    - Classes
-        - [Creature](.classes/Creature.md)
+    - Eluna Classes
+        - [Creature](./classes/Creature.md)
         - [GameObject](./classes/GameObject.md)
     - Events        
     - Enums

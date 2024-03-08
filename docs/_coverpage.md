@@ -9,4 +9,6 @@
 [GitHub](https://github.com/araxiaonline/)
 [Get Started](#about)
 
+<!-- background color -->
+
 ![color](#11111f)

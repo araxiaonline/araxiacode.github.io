@@ -3,6 +3,7 @@
     - Getting Started
     - Configuration    
     - Eluna Classes
+        - [Aura](./classes/Aura.md)
         - [BattleGround](./classes/BattleGround.md)
         - [Creature](./classes/Creature.md)
         - [GameObject](./classes/GameObject.md)

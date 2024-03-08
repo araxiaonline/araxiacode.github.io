@@ -2013,3 +2013,518 @@ In this example, when the boss creature is summoned, the script checks its loot 
 
 This allows the raid to prepare accordingly based on the difficulty of the encounter and the expected loot rewards.
 
+## GetLootRecipient
+Returns the player that is currently able to loot the creature.  This is typically the player that landed the killing blow, but in a group scenario, the loot may be round-robin or selected by the group leader, depending on loot settings.
+
+### Parameters
+None
+
+### Returns
+[Player](./player.md) - The player that can loot the creature
+
+### Example Usage
+This example will reward the player with extra gold when looting a creature based on the creature's level.
+
+```typescript
+const GOLD_MULTIPLIER = 0.5;
+
+const OnCreatureLoot: creature_event_on_loot = (event: number, creature: Creature, player: Player): void => {
+    const lootRecipient = creature.GetLootRecipient();
+
+    if (lootRecipient && lootRecipient.GetGUID() === player.GetGUID()) {
+        const creatureLevel = creature.GetLevel();
+        const bonusGold = Math.floor(creatureLevel * GOLD_MULTIPLIER);
+
+        if (bonusGold > 0) {
+            lootRecipient.ModifyMoney(bonusGold);
+            lootRecipient.SendBroadcastMessage(`You receive an extra ${bonusGold} gold for looting a level ${creatureLevel} creature!`);
+        }
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_LOOT, (...args) => OnCreatureLoot(...args));
+```
+
+In this example:
+
+1. We define a constant `GOLD_MULTIPLIER` to determine the amount of bonus gold per creature level.
+2. In the `OnCreatureLoot` event handler, we get the loot recipient using `creature.GetLootRecipient()`.
+3. We check if there is a loot recipient and if it matches the player who triggered the event.
+4. If the player is the loot recipient, we calculate the bonus gold based on the creature's level and the `GOLD_MULTIPLIER`.
+5. If the bonus gold is greater than 0, we modify the player's money using `lootRecipient.ModifyMoney(bonusGold)` and send a broadcast message to the player informing them of the extra gold they received.
+
+This script encourages players to loot creatures by rewarding them with additional gold based on the creature's level. The higher the level of the creature, the more bonus gold the player will receive.
+
+## GetLootRecipientGroup
+Returns the [Group](./group.md) that is currently able to loot this creature. This is determined by the group that did the most damage to the creature or has the most members with loot rights.
+
+### Parameters
+None
+
+### Returns
+[Group](./group.md) - The group that can loot this creature.
+
+### Example Usage
+This example demonstrates how to reward a special item to the group that gets loot rights on a creature kill. It will check if the group can loot the creature, and if so, it will randomly choose a member of the group to receive the special item.
+
+```typescript
+const SPECIAL_ITEM_ENTRY = 12345;
+
+const CreatureDeath: creature_event_on_just_died = (event: number, creature: Creature, killer: Unit) => {
+    const lootGroup = creature.GetLootRecipientGroup();
+
+    if (lootGroup) {
+        const groupMembers = lootGroup.GetMembers();
+        const numMembers = groupMembers.length;
+
+        if (numMembers > 0) {
+            // Randomly choose a group member to receive the special item
+            const randomIndex = Math.floor(Math.random() * numMembers);
+            const luckyMember = groupMembers[randomIndex];
+
+            // Add the special item to the chosen member's inventory
+            luckyMember.AddItem(SPECIAL_ITEM_ENTRY, 1);
+
+            // Announce the lucky winner to the group
+            lootGroup.SendGroupMessage(`${luckyMember.GetName()} has received a special item for being part of the group that defeated ${creature.GetName()}!`);
+        }
+    }
+}
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_JUST_DIED, (...args) => CreatureDeath(...args));
+```
+
+In this example:
+1. We define a constant `SPECIAL_ITEM_ENTRY` to represent the entry ID of the special item we want to reward.
+2. We register a creature event handler for the `CREATURE_EVENT_ON_JUST_DIED` event.
+3. Inside the event handler, we retrieve the group that can loot the creature using `creature.GetLootRecipientGroup()`.
+4. If a loot group exists, we get the array of group members using `lootGroup.GetMembers()`.
+5. We check if there are any members in the group.
+6. If there are members, we randomly select one member using `Math.random()` and array indexing.
+7. We add the special item to the chosen member's inventory using `luckyMember.AddItem()`.
+8. Finally, we send a message to the entire group announcing the lucky winner using `lootGroup.SendGroupMessage()`.
+
+This script ensures that only the group with loot rights has a chance to receive the special item, and it randomly distributes the item to one of the group members.
+
+## GetNPCFlags
+Returns the NPC flags associated with the creature. NPC flags determine the behavior and capabilities of the NPC, such as being a vendor, quest giver, or able to repair items.
+
+### Parameters
+None
+
+### Returns
+flags: number - The NPC flags associated with the creature.
+
+### Example Usage
+```typescript
+// Constants for NPC flags
+const UNIT_NPC_FLAG_NONE                  = 0;
+const UNIT_NPC_FLAG_GOSSIP                = 1;
+const UNIT_NPC_FLAG_QUESTGIVER            = 2;
+const UNIT_NPC_FLAG_VENDOR                = 128;
+const UNIT_NPC_FLAG_REPAIR                = 4096;
+
+// Function to handle gossip events
+function onGossipHello(event: PlayerGossipEvent, player: Player, creature: Creature): void {
+    const npcFlags = creature.GetNPCFlags();
+
+    if (npcFlags & UNIT_NPC_FLAG_QUESTGIVER) {
+        // If the NPC is a quest giver, show available quests
+        player.PlayerTalkClass.GetQuestMenu().AddMenuItem(0, 0);
+        player.PlayerTalkClass.SendGossipMenu(player.GetGossipTextId(creature), creature.GetGUID());
+    }
+
+    if (npcFlags & UNIT_NPC_FLAG_VENDOR) {
+        // If the NPC is a vendor, show the vendor window
+        player.GetSession().SendListInventory(creature.GetGUID());
+    }
+
+    if (npcFlags & UNIT_NPC_FLAG_REPAIR) {
+        // If the NPC can repair items, show the repair functionality
+        player.GetSession().SendRepairList(creature.GetGUID());
+    }
+
+    if (!(npcFlags & UNIT_NPC_FLAG_GOSSIP)) {
+        // If the NPC doesn't have the gossip flag, close the gossip window
+        player.PlayerTalkClass.SendCloseGossip();
+    }
+}
+
+// Register the gossip event
+RegisterCreatureGossipEvent(NPC_ENTRY, (...args) => onGossipHello(...args));
+```
+
+In this example, we define constants for different NPC flags such as `UNIT_NPC_FLAG_QUESTGIVER`, `UNIT_NPC_FLAG_VENDOR`, and `UNIT_NPC_FLAG_REPAIR`. These flags determine the capabilities of the NPC.
+
+We create a function `onGossipHello` to handle the gossip event when a player interacts with the NPC. Inside the function, we retrieve the NPC flags using the `GetNPCFlags` method.
+
+Based on the NPC flags, we perform different actions:
+- If the NPC is a quest giver (`UNIT_NPC_FLAG_QUESTGIVER`), we add the quest menu items and send the gossip menu to the player.
+- If the NPC is a vendor (`UNIT_NPC_FLAG_VENDOR`), we send the vendor window to the player.
+- If the NPC can repair items (`UNIT_NPC_FLAG_REPAIR`), we send the repair functionality to the player.
+- If the NPC doesn't have the gossip flag (`UNIT_NPC_FLAG_GOSSIP`), we close the gossip window.
+
+Finally, we register the `onGossipHello` function to handle the gossip event for the specific NPC entry using `RegisterCreatureGossipEvent`.
+
+By utilizing the `GetNPCFlags` method, we can determine the behavior and capabilities of the NPC and provide appropriate functionality to the player based on those flags.
+
+## GetRespawnDelay
+Returns the time it takes for the Creature to respawn once it has been killed. This value is usually set in the creature's database entry and does not change over the course of the Creature's lifespan. However, this value can be modified by using the [Creature:SetRespawnDelay](./creature.md#setrespawndelay) method.
+
+### Parameters
+None
+
+### Returns
+respawnDelay: number - The time in seconds it takes for the Creature to respawn.
+
+### Example Usage
+This example demonstrates how to create a script that increases the respawn time of a specific creature by a random amount between 1 and 10 minutes when it dies.
+
+```typescript
+const CREATURE_ENTRY = 1234;
+const MIN_RESPAWN_DELAY = 60; // 1 minute
+const MAX_RESPAWN_DELAY = 600; // 10 minutes
+
+const onCreatureDeath: creature_event_on_creature_death = (event: number, creature: Creature, killer: Unit): void => {
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        const currentRespawnDelay = creature.GetRespawnDelay();
+        const additionalDelay = Math.floor(Math.random() * (MAX_RESPAWN_DELAY - MIN_RESPAWN_DELAY + 1)) + MIN_RESPAWN_DELAY;
+        const newRespawnDelay = currentRespawnDelay + additionalDelay;
+
+        creature.SetRespawnDelay(newRespawnDelay);
+
+        console.log(`Creature ${CREATURE_ENTRY} died. Respawn delay increased from ${currentRespawnDelay} to ${newRespawnDelay} seconds.`);
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_CREATURE_DEATH, (...args) => onCreatureDeath(...args));
+```
+
+In this example:
+1. We define constants for the specific creature entry we want to modify, and the minimum and maximum additional respawn delay in seconds.
+2. We register a creature event handler for the `CREATURE_EVENT_ON_CREATURE_DEATH` event.
+3. When the event is triggered, we check if the died creature's entry matches our desired entry.
+4. If it matches, we retrieve the current respawn delay using `GetRespawnDelay()`.
+5. We generate a random additional delay between the specified minimum and maximum values.
+6. We calculate the new respawn delay by adding the current delay and the additional random delay.
+7. We set the new respawn delay using `SetRespawnDelay()`.
+8. Finally, we log a message indicating the creature's entry, the original respawn delay, and the new respawn delay.
+
+This script enhances the gameplay experience by making the specified creature's respawn time more unpredictable, adding a sense of dynamism to the world.
+
+## GetScriptId
+Returns the unique script ID assigned to this creature's script name by the AzerothCore engine.
+
+### Parameters
+None
+
+### Returns
+scriptId: number - The unique script ID assigned to this creature's script name.
+
+### Example Usage
+This example demonstrates how to use the `GetScriptId()` method to determine if a creature has a specific script attached to it. In this case, we're checking if the creature has the "boss_onyxia" script.
+
+```typescript
+const BOSS_ONYXIA_SCRIPT_ID = 12345; // Replace with the actual script ID for "boss_onyxia"
+
+const OnCreatureKill: creature_event_on_creature_kill = (event: number, killer: Unit, killed: Creature) => {
+    if (killed.GetScriptId() === BOSS_ONYXIA_SCRIPT_ID) {
+        // Onyxia has been killed
+        // Perform actions specific to Onyxia's death, such as:
+        // - Announcing the kill to the server
+        SendWorldMessage("Onyxia has been slain by " + killer.GetName() + "!");
+
+        // - Granting rewards to the raid group
+        const group = killer.GetGroup();
+        if (group) {
+            for (const member of group.GetMembers()) {
+                member.AddItem(ONYXIA_SCALE, 1); // Give each raid member an Onyxia Scale
+                member.ModifyMoney(100 * 10000); // Give each raid member 100 gold
+            }
+        }
+
+        // - Updating the world state or quest status
+        SetWorldState(ONYXIA_KILLED_WORLD_STATE, 1); // Set a world state to indicate Onyxia has been killed
+        killer.AreaExploredOrEventHappens(ONYXIA_QUEST_ENTRY); // Mark the Onyxia quest as completed for the killer
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_CREATURE_KILL, (...args) => OnCreatureKill(...args));
+```
+
+In this example, when a creature is killed, we check if its script ID matches the ID for the "boss_onyxia" script. If it does, we perform actions specific to Onyxia's death, such as announcing the kill to the server, granting rewards to the raid group, updating the world state, and marking the Onyxia quest as completed for the killer.
+
+Using `GetScriptId()` allows you to identify creatures with specific scripts attached to them and perform custom actions based on those scripts.
+
+## GetScriptName
+
+Returns the script name assigned to the Creature. This script name is used by the core to apply C++ scripts to the Creature. However, it is important to note that Eluna will override any AI scripts assigned through this method.
+
+### Parameters
+
+This method does not take any parameters.
+
+### Returns
+
+* string - The script name assigned to the Creature.
+
+### Example Usage
+
+This example demonstrates how to retrieve the script name of a Creature and perform different actions based on the script name.
+
+```typescript
+const CREATURE_ENTRY = 1234;
+
+const OnCreatureSpawn: creature_event_on_spawn = (event: number, creature: Creature) => {
+    const scriptName = creature.GetScriptName();
+
+    switch (scriptName) {
+        case "npc_example_script_1":
+            // Perform actions specific to script "npc_example_script_1"
+            creature.SetEquipmentSlots(0, 12345, 0, 0); // Set main hand weapon
+            creature.SetHomePosition(creature.GetX(), creature.GetY(), creature.GetZ(), creature.GetO());
+            break;
+        case "npc_example_script_2":
+            // Perform actions specific to script "npc_example_script_2"
+            creature.SetUInt32Value(UnitFields.UNIT_NPC_FLAGS, NPCFlags.GOSSIP);
+            creature.SetUInt32Value(UnitFields.UNIT_NPC_FLAGS, creature.GetUInt32Value(UnitFields.UNIT_NPC_FLAGS) | NPCFlags.QUESTGIVER);
+            break;
+        default:
+            // Perform default actions for creatures without a specific script
+            creature.SetUInt32Value(UnitFields.UNIT_NPC_FLAGS, NPCFlags.GOSSIP);
+            break;
+    }
+};
+
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_SPAWN, OnCreatureSpawn);
+```
+
+In this example:
+1. We define a constant `CREATURE_ENTRY` to specify the entry ID of the Creature we want to handle.
+2. We register the `OnCreatureSpawn` event handler for the specified Creature entry using `RegisterCreatureEvent()`.
+3. Inside the event handler, we retrieve the script name of the spawned Creature using `creature.GetScriptName()`.
+4. We use a `switch` statement to perform different actions based on the script name:
+   - If the script name is "npc_example_script_1", we set the Creature's main hand weapon using `SetEquipmentSlots()` and set its home position using `SetHomePosition()`.
+   - If the script name is "npc_example_script_2", we set the Creature's NPC flags to enable gossip and quest giver functionality using `SetUInt32Value()`.
+   - If the script name doesn't match any specific case, we perform default actions, such as setting the NPC flags to enable gossip.
+5. The event handler will be called whenever a Creature with the specified entry ID spawns in the game world.
+
+This example showcases how you can utilize the `GetScriptName()` method to retrieve the script name assigned to a Creature and perform different actions based on the script name. It allows you to customize the behavior of Creatures with specific script names while providing a default behavior for Creatures without a specific script.
+
+## GetShieldBlockValue
+Returns the shield block value for the Creature. This value represents the amount of damage that the Creature can block with its shield.
+
+### Parameters
+None
+
+### Returns
+* number - The shield block value of the Creature.
+
+### Example Usage
+This example demonstrates how to retrieve the shield block value of a Creature and adjust its stats based on that value.
+
+```typescript
+const CREATURE_ENTRY = 1234;
+const SHIELD_BLOCK_THRESHOLD = 100;
+const BONUS_ARMOR = 500;
+
+const CreatureScript: creature_event_on_spawn = (event: number, creature: Creature): void => {
+    const shieldBlockValue = creature.GetShieldBlockValue();
+
+    if (shieldBlockValue >= SHIELD_BLOCK_THRESHOLD) {
+        const healthBonus = Math.floor(shieldBlockValue / SHIELD_BLOCK_THRESHOLD) * 1000;
+        creature.SetMaxHealth(creature.GetMaxHealth() + healthBonus);
+        creature.SetHealth(creature.GetHealth() + healthBonus);
+
+        const armorBonus = Math.floor(shieldBlockValue / SHIELD_BLOCK_THRESHOLD) * BONUS_ARMOR;
+        creature.SetArmor(creature.GetArmor() + armorBonus);
+
+        creature.SendUnitWhisper("My shield is strong! I gain bonus health and armor.", 0, creature.GetGUID());
+    } else {
+        creature.SendUnitWhisper("My shield is weak. I must rely on my other defenses.", 0, creature.GetGUID());
+    }
+};
+
+const entryBinding = RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_SPAWN, (...args) => CreatureScript(...args));
+```
+
+In this example:
+1. We define the `CREATURE_ENTRY` constant to specify the entry ID of the Creature we want to modify.
+2. We define the `SHIELD_BLOCK_THRESHOLD` constant as a threshold value for the shield block value.
+3. We define the `BONUS_ARMOR` constant as the amount of bonus armor to grant the Creature for each threshold exceeded.
+4. Inside the `CreatureScript` function, we retrieve the shield block value of the Creature using `creature.GetShieldBlockValue()`.
+5. We check if the shield block value is greater than or equal to the `SHIELD_BLOCK_THRESHOLD`.
+6. If the threshold is met, we calculate the bonus health and armor based on the shield block value and the defined constants.
+7. We update the Creature's max health, current health, and armor using the calculated bonus values.
+8. We send a whisper to the Creature indicating that its shield is strong and it gains bonus health and armor.
+9. If the threshold is not met, we send a whisper to the Creature indicating that its shield is weak.
+10. Finally, we register the `CreatureScript` function to be triggered when a Creature with the specified `CREATURE_ENTRY` spawns using `RegisterCreatureEvent`.
+
+This example showcases how the `GetShieldBlockValue` method can be used to retrieve the shield block value of a Creature and make decisions or adjustments based on that value, such as granting bonus stats or providing visual feedback to the Creature.
+
+## GetWanderRadius
+Returns the radius, in yards, that the Creature is allowed to wander or patrol from its spawn point.
+
+### Parameters
+None
+
+### Returns
+radius: number - The wander radius in yards.
+
+### Example Usage
+This example demonstrates how to use the `GetWanderRadius` method to create a script that doubles the wander radius of creatures when they spawn, and halves it when they die.
+
+```typescript
+// Event handler for creature spawn
+const onCreatureSpawn: creature_event_on_spawn = (event: CreatureEvents, creature: Creature) => {
+    const originalWanderRadius = creature.GetWanderRadius();
+    const doubledWanderRadius = originalWanderRadius * 2;
+
+    creature.SetWanderRadius(doubledWanderRadius);
+
+    console.log(`[Creature Spawn] Creature ID: ${creature.GetEntry()} - Original Wander Radius: ${originalWanderRadius} - Doubled Wander Radius: ${doubledWanderRadius}`);
+};
+
+// Event handler for creature death
+const onCreatureDeath: creature_event_on_died = (event: CreatureEvents, creature: Creature, killer: Unit) => {
+    const originalWanderRadius = creature.GetWanderRadius();
+    const halvedWanderRadius = originalWanderRadius / 2;
+
+    creature.SetWanderRadius(halvedWanderRadius);
+
+    console.log(`[Creature Death] Creature ID: ${creature.GetEntry()} - Original Wander Radius: ${originalWanderRadius} - Halved Wander Radius: ${halvedWanderRadius}`);
+};
+
+// Register the event handlers
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_SPAWN, (event, creature) => onCreatureSpawn(event, creature));
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_DIED, (event, creature, killer) => onCreatureDeath(event, creature, killer));
+```
+
+In this example:
+1. The `onCreatureSpawn` event handler is triggered when a creature spawns.
+   - It retrieves the creature's original wander radius using `GetWanderRadius()`.
+   - It calculates the doubled wander radius by multiplying the original radius by 2.
+   - It sets the creature's new wander radius using `SetWanderRadius()`.
+   - It logs the creature's ID, original wander radius, and doubled wander radius.
+
+2. The `onCreatureDeath` event handler is triggered when a creature dies.
+   - It retrieves the creature's current wander radius using `GetWanderRadius()`.
+   - It calculates the halved wander radius by dividing the current radius by 2.
+   - It sets the creature's new wander radius using `SetWanderRadius()`.
+   - It logs the creature's ID, original wander radius, and halved wander radius.
+
+3. The event handlers are registered using `RegisterCreatureEvent` for the respective events (`CREATURE_EVENT_ON_SPAWN` and `CREATURE_EVENT_ON_DIED`).
+
+This script effectively doubles the wander radius of creatures when they spawn and halves it when they die, providing a dynamic adjustment to their movement behavior based on their lifecycle events.
+
+## GetWaypointPath
+
+Returns the current waypoint path ID of the Creature. Waypoint paths are defined in the `waypoint_data` table in the world database. Each waypoint path consists of a series of coordinates that the Creature follows in a specific order. The path ID is a unique identifier for each waypoint path.
+
+### Parameters
+
+None
+
+### Returns
+
+* pathId: number - The current waypoint path ID of the Creature. Returns 0 if the Creature is not following a waypoint path.
+
+### Example Usage
+
+Retrieve the waypoint path ID of a Creature and modify its movement behavior based on the path.
+
+```typescript
+const CREATURE_ENTRY = 12345;
+const WAYPOINT_PATH_ID_1 = 1;
+const WAYPOINT_PATH_ID_2 = 2;
+
+const onCreatureSpawn: creature_event_on_spawn = (event: number, creature: Creature) => {
+    const pathId = creature.GetWaypointPath();
+
+    if (creature.GetEntry() === CREATURE_ENTRY) {
+        if (pathId === WAYPOINT_PATH_ID_1) {
+            // Creature is following waypoint path 1
+            creature.SetWalk(true); // Set the Creature to walk mode
+            creature.SetHomePosition(creature.GetX(), creature.GetY(), creature.GetZ(), creature.GetO());
+            creature.LoadPath(pathId); // Load the waypoint path
+            creature.SetDefaultMovementType(0); // Set movement type to waypoint movement
+            creature.GetMotionMaster().MovePath(pathId, true); // Start moving along the path
+        } else if (pathId === WAYPOINT_PATH_ID_2) {
+            // Creature is following waypoint path 2
+            creature.SetRun(true); // Set the Creature to run mode
+            creature.SetHomePosition(creature.GetX(), creature.GetY(), creature.GetZ(), creature.GetO());
+            creature.LoadPath(pathId); // Load the waypoint path
+            creature.SetDefaultMovementType(0); // Set movement type to waypoint movement
+            creature.GetMotionMaster().MovePath(pathId, false); // Start moving along the path without repeating
+        } else {
+            // Creature is not following a waypoint path
+            creature.SetWalk(true); // Set the Creature to walk mode
+            creature.SetDefaultMovementType(1); // Set movement type to random movement
+            creature.GetMotionMaster().MoveRandom(5.0); // Start moving randomly within a 5-yard radius
+        }
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_SPAWN, (...args) => onCreatureSpawn(...args));
+```
+
+In this example, when a Creature with the specified entry spawns, it retrieves the waypoint path ID using `GetWaypointPath()`. Based on the path ID, the Creature's movement behavior is modified accordingly.
+
+If the Creature is following waypoint path 1, it is set to walk mode, and its home position is set. The waypoint path is loaded, the movement type is set to waypoint movement, and the Creature starts moving along the path, repeating it indefinitely.
+
+If the Creature is following waypoint path 2, it is set to run mode, and its home position is set. The waypoint path is loaded, the movement type is set to waypoint movement, and the Creature starts moving along the path without repeating.
+
+If the Creature is not following any waypoint path, it is set to walk mode, and its movement type is set to random movement. The Creature starts moving randomly within a 5-yard radius.
+
+This example demonstrates how you can use `GetWaypointPath()` to determine the current waypoint path of a Creature and customize its movement behavior based on the path ID.
+
+## HasCategoryCooldown
+Checks if the Creature has a category cooldown which prevents them from casting the specified spell.
+
+### Parameters
+* spellId: number - The ID of the spell to check the category cooldown for.
+
+### Returns
+* boolean - Returns `true` if the Creature cannot cast the spell due to a category cooldown, and returns `false` otherwise.
+
+### Example Usage
+Create a script to prevent a boss from spamming a powerful ability by checking the category cooldown before casting.
+
+```typescript
+const BOSS_ENTRY = 12345;
+const SPELL_ID = 67890;
+const CATEGORY_COOLDOWN = 30000; // 30 seconds
+
+const SpellCheck: creature_event_on_spawn = (event: number, creature: Creature) => {
+    const isBoss = creature.GetEntry() === BOSS_ENTRY;
+
+    if (isBoss) {
+        const canCastSpell = !creature.HasCategoryCooldown(SPELL_ID);
+
+        if (canCastSpell) {
+            creature.CastSpell(creature, SPELL_ID, false);
+            creature.AddCreatureSpellCooldown(SPELL_ID);
+
+            setTimeout(() => {
+                creature.RemoveCreatureSpellCooldown(SPELL_ID);
+            }, CATEGORY_COOLDOWN);
+        } else {
+            console.log(`Boss ${BOSS_ENTRY} cannot cast spell ${SPELL_ID} due to category cooldown.`);
+        }
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_SPAWN, (...args) => SpellCheck(...args));
+```
+
+In this example:
+1. We define constants for the boss entry ID, the spell ID, and the category cooldown duration.
+2. In the `SpellCheck` function, we first check if the spawned creature is the boss we're interested in.
+3. If it is the boss, we use `HasCategoryCooldown` to check if the boss can cast the specified spell.
+4. If the boss can cast the spell (i.e., no category cooldown), we make the boss cast the spell using `CastSpell`, and then add a creature spell cooldown using `AddCreatureSpellCooldown`.
+5. We set a timeout to remove the creature spell cooldown after the specified category cooldown duration using `RemoveCreatureSpellCooldown`.
+6. If the boss cannot cast the spell due to a category cooldown, we log a message indicating that the boss cannot cast the spell.
+7. Finally, we register the `SpellCheck` function to the `CREATURE_EVENT_ON_SPAWN` event using `RegisterCreatureEvent`.
+
+This script ensures that the boss respects the category cooldown and doesn't spam the powerful ability too frequently.
+

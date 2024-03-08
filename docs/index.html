@@ -15,6 +15,7 @@
       --dark-background: #11111f;
       --sidebar-background: #11111f;
       --content-max-width: 80em;
+      --cover-background-image: radial-gradient(ellipse at center bottom, hsl(201deg 69.76% 12.89%), transparent);
     }
 
   .cover-main img {
@@ -29,6 +30,11 @@
 }
 body {
   background-color: var(--dark-background) !important;
+}
+
+body::before {
+  background-color: var(--dark-background) !important;
+
 }
 
 

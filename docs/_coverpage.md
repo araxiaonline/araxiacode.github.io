@@ -1,6 +1,6 @@
 <!-- _coverpage.md -->
 
-![logo](_media/logo.png)
+![logo](media/logo.png)
 
 # AraxiaCode <small>alpha</small>
 

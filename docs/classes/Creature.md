@@ -4715,3 +4715,157 @@ In this example:
 
 This script sets a custom respawn delay for Ysondre when she is killed and notifies players on the same map about the respawn time. It provides a more engaging experience for players by giving them information about when they can expect to encounter Ysondre again.
 
+## SetWalk
+This method allows you to set whether the Creature is currently walking or running. By default, creatures are set to run.
+
+### Parameters
+- enable: boolean (optional) - If set to true, the Creature will walk. If set to false or not provided, the Creature will run.
+
+### Example Usage
+In this example, we create a script that makes all creatures in the game walk instead of run when they are not in combat. When they enter combat, they will start running again.
+
+```typescript
+// Store the original movement speeds of each creature
+const originalSpeeds: Map<Creature, number> = new Map();
+
+const onCreatureCreate: creature_event_on_spawn = (event: number, creature: Creature) => {
+    // Store the original movement speed of the creature
+    originalSpeeds.set(creature, creature.GetSpeed(UnitMoveType.MOVE_RUN));
+
+    // Set the creature to walk
+    creature.SetWalk(true);
+};
+
+const onCreatureEnterCombat: creature_event_on_enter_combat = (event: number, creature: Creature, target: Unit) => {
+    // Get the original movement speed of the creature
+    const originalSpeed = originalSpeeds.get(creature);
+
+    if (originalSpeed) {
+        // Set the creature's movement speed back to its original value
+        creature.SetSpeed(UnitMoveType.MOVE_RUN, originalSpeed);
+
+        // Remove the creature from the originalSpeeds map
+        originalSpeeds.delete(creature);
+    }
+};
+
+const onCreatureLeaveCombat: creature_event_on_leave_combat = (event: number, creature: Creature) => {
+    // Store the original movement speed of the creature
+    originalSpeeds.set(creature, creature.GetSpeed(UnitMoveType.MOVE_RUN));
+
+    // Set the creature to walk
+    creature.SetWalk(true);
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_SPAWN, (...args) => onCreatureCreate(...args));
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_ENTER_COMBAT, (...args) => onCreatureEnterCombat(...args));
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_LEAVE_COMBAT, (...args) => onCreatureLeaveCombat(...args));
+```
+
+In this script:
+
+1. We create a Map called `originalSpeeds` to store the original movement speeds of each creature.
+
+2. When a creature is created (spawns), we store its original movement speed in the `originalSpeeds` map and set it to walk using `SetWalk(true)`.
+
+3. When a creature enters combat, we retrieve its original movement speed from the `originalSpeeds` map, set its speed back to the original value using `SetSpeed()`, and remove it from the `originalSpeeds` map.
+
+4. When a creature leaves combat, we store its original movement speed in the `originalSpeeds` map again and set it to walk using `SetWalk(true)`.
+
+By registering these event handlers, all creatures in the game will walk when they are not in combat and run when they are in combat.
+
+## SetWanderRadius
+This method allows you to set the maximum distance a creature can wander from its spawn point. By default, creatures have a wander radius of 5.0 units. Setting the wander radius to 0 will disable wandering altogether.
+
+### Parameters
+* distance: number - The maximum distance in game units (yards) that the creature can wander from its spawn point.
+
+### Example Usage
+In this example, we have a script that adjusts the wander radius of a creature based on its health percentage. As the creature loses health, it will wander less far from its spawn point, making it easier for players to finish it off.
+
+```typescript
+const CREATURE_ENTRY = 1234;
+const MAX_WANDER_RADIUS = 20.0;
+
+const UpdateAI: creature_event_on_aiupdate = (event: number, creature: Creature, diff: number) => {
+    const healthPct = creature.GetHealthPct();
+    let wanderRadius = MAX_WANDER_RADIUS;
+
+    if (healthPct <= 20) {
+        // If health is 20% or less, stop wandering
+        wanderRadius = 0;
+    } else if (healthPct <= 50) {
+        // If health is between 20% and 50%, wander up to half the maximum radius
+        wanderRadius = MAX_WANDER_RADIUS / 2;
+    } else if (healthPct <= 80) {
+        // If health is between 50% and 80%, wander up to 75% of the maximum radius
+        wanderRadius = MAX_WANDER_RADIUS * 0.75;
+    }
+
+    creature.SetWanderRadius(wanderRadius);
+};
+
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_AIUPDATE, (...args) => UpdateAI(...args));
+```
+
+In this script:
+1. We define the creature entry and the maximum wander radius as constants.
+2. In the `UpdateAI` event handler, we get the creature's current health percentage using `GetHealthPct()`.
+3. We initialize the `wanderRadius` variable with the maximum wander radius.
+4. We use conditional statements to adjust the `wanderRadius` based on the creature's health percentage:
+   - If health is 20% or less, we set `wanderRadius` to 0 to stop wandering.
+   - If health is between 20% and 50%, we set `wanderRadius` to half the maximum radius.
+   - If health is between 50% and 80%, we set `wanderRadius` to 75% of the maximum radius.
+5. Finally, we call `SetWanderRadius()` with the adjusted `wanderRadius` value to update the creature's wander radius.
+
+This script ensures that as the creature takes damage and its health decreases, it will wander less far from its spawn point, making it more predictable and easier for players to defeat.
+
+## UpdateEntry
+The `UpdateEntry` method allows you to transform a [Creature](./creature.md) into another Creature by providing the new Creature's entry ID. This method is useful when you want to change the appearance, stats, or abilities of a Creature dynamically during gameplay.
+
+### Parameters
+* `entry`: number - The entry ID of the Creature you want to transform into. You can find the entry IDs in the `creature_template` table of the AzerothCore database.
+* `dataGUIDLow`?: number - (Optional) The GUID (Globally Unique Identifier) of the Creature. If not provided, the current Creature's GUID will be used.
+
+### Example Usage
+Let's say you have a custom event where a boss Creature transforms into a stronger version of itself when its health drops below 50%. You can use the `UpdateEntry` method to change the Creature's entry to the stronger version.
+
+```typescript
+const BOSS_ENTRY_NORMAL = 12345;
+const BOSS_ENTRY_ENRAGED = 12346;
+
+const OnCreatureHealthPctChange: creature_event_on_hp_pct_change = (event: number, creature: Creature, pct: number) => {
+    if (creature.GetEntry() === BOSS_ENTRY_NORMAL && pct <= 50) {
+        // Get the creature's current position
+        const position = creature.GetPosition();
+
+        // Transform the creature into its enraged version
+        creature.UpdateEntry(BOSS_ENTRY_ENRAGED);
+
+        // Move the transformed creature to the same position
+        creature.Relocate(position.x, position.y, position.z, position.o);
+
+        // Update the creature's health to full
+        creature.SetFullHealth();
+
+        // Send a world text to all players indicating the transformation
+        creature.SendWorldText(`The boss has transformed into its enraged form!`);
+
+        // Play a sound effect to indicate the transformation
+        creature.PlayDirectSound(8585);
+
+        // Increase the creature's damage by 50%
+        creature.SetDamageMultiplier(1.5);
+
+        // Increase the creature's movement speed by 30%
+        creature.SetSpeedRate(CreatureSpeedType.CREATURE_SPEED_RUN, 1.3);
+    }
+};
+
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_HP_PCT_CHANGE, (...args) => OnCreatureHealthPctChange(...args));
+```
+
+In this example, when the boss Creature's health drops below 50%, the `UpdateEntry` method is called to transform it into the enraged version (entry ID: 12346). The transformed Creature is then relocated to the same position, its health is set to full, and various visual and gameplay effects are applied to indicate the transformation, such as sending a world text, playing a sound effect, increasing damage, and increasing movement speed.
+
+By using the `UpdateEntry` method, you can create dynamic and immersive encounters where Creatures can change their appearance and abilities based on certain conditions or events.
+

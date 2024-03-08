@@ -825,3 +825,332 @@ In this script:
 
 This script allows players to quickly check if another player is a member of their group by sending a message in the chat with the format "!checkMember PlayerName".
 
+## IsRaidGroup
+Returns 'true' if the [Group] is a raid group.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+boolean: 'true' if the [Group] is a raid group, 'false' otherwise.
+
+### Example Usage
+This example demonstrates how to check if a group is a raid group and perform different actions based on the result.
+
+```typescript
+const OnGroupFormed: group_event_on_create = (eventId: number, group: Group) => {
+    // Get the leader of the group
+    const leader = group.GetLeader();
+
+    // Check if the group is a raid group
+    if (group.IsRaidGroup()) {
+        // If it's a raid group, send a message to the leader
+        leader.SendBroadcastMessage("You have formed a raid group!");
+
+        // Reward the leader with a special item for forming a raid group
+        const rewardItemEntry = 12345; // Replace with the desired item entry ID
+        const rewardItemCount = 1;
+        leader.AddItem(rewardItemEntry, rewardItemCount);
+
+        // Announce to the raid group that they have been rewarded
+        group.SendPacketToAll("The raid leader has been rewarded for forming the group!");
+    } else {
+        // If it's a regular group, send a different message to the leader
+        leader.SendBroadcastMessage("You have formed a regular group.");
+
+        // Reward all group members with a smaller item
+        const rewardItemEntry = 67890; // Replace with the desired item entry ID
+        const rewardItemCount = 1;
+        group.GetMembers().forEach((member) => {
+            member.AddItem(rewardItemEntry, rewardItemCount);
+        });
+
+        // Announce to the group that they have been rewarded
+        group.SendPacketToAll("All group members have been rewarded!");
+    }
+};
+
+RegisterGroupEvent(GroupEvents.GROUP_EVENT_ON_CREATE, OnGroupFormed);
+```
+
+In this example:
+
+1. When a group is formed, the script checks if it is a raid group using the `IsRaidGroup()` method.
+2. If it is a raid group:
+   - The leader receives a special broadcast message.
+   - The leader is rewarded with a specific item (you need to replace `rewardItemEntry` with the desired item entry ID).
+   - The entire raid group is notified that the leader has been rewarded.
+3. If it is a regular group:
+   - The leader receives a different broadcast message.
+   - All group members are rewarded with a smaller item (you need to replace `rewardItemEntry` with the desired item entry ID).
+   - The entire group is notified that all members have been rewarded.
+
+This script showcases how you can differentiate between raid groups and regular groups using the `IsRaidGroup()` method and perform different actions accordingly. You can customize the rewards, messages, and other actions based on your specific requirements.
+
+## RemoveMember
+Removes a player from the group using the specified remove method. If the player is successfully removed, the method returns 'true'.
+
+### Parameters
+* guid: number - The GUID of the player to remove from the group.
+* method: [RemoveMethod](./group.md#removemethod) - The method to use when removing the player from the group.
+
+### Returns
+* boolean - 'true' if the player was successfully removed from the group, 'false' otherwise.
+
+### Example Usage
+```typescript
+const OnLootItem: player_event_on_loot_item = (event: number, player: Player, item: Item) => {
+    const itemId = item.GetEntry();
+    const itemCount = item.GetCount();
+
+    // Check if the looted item is a quest item
+    if (IsQuestItem(itemId)) {
+        const group = player.GetGroup();
+
+        if (group) {
+            const groupMembers = group.GetMembers();
+
+            // Iterate through group members and remove those who don't need the quest item
+            for (const memberGuid of groupMembers) {
+                const member = group.GetMember(memberGuid);
+
+                if (member && !member.HasQuest(GetQuestIdForItem(itemId))) {
+                    // Remove the member from the group using the leave method
+                    const removed = group.RemoveMember(memberGuid, RemoveMethod.GROUP_REMOVEMETHOD_LEAVE);
+
+                    if (removed) {
+                        // Notify the removed player
+                        member.SendBroadcastMessage("You have been removed from the group because you don't need the quest item.");
+                    }
+                }
+            }
+
+            // Equally distribute the quest items among the remaining group members
+            const remainingMembers = group.GetMembers();
+            const itemsPerMember = Math.floor(itemCount / remainingMembers.length);
+
+            for (const memberGuid of remainingMembers) {
+                const member = group.GetMember(memberGuid);
+
+                if (member) {
+                    member.AddItem(itemId, itemsPerMember);
+                }
+            }
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOOT_ITEM, (...args) => OnLootItem(...args));
+```
+
+### RemoveMethod
+The `RemoveMethod` enum represents the different methods that can be used to remove a player from a group.
+
+```typescript
+enum RemoveMethod
+{
+    GROUP_REMOVEMETHOD_DEFAULT  = 0,
+    GROUP_REMOVEMETHOD_KICK     = 1,
+    GROUP_REMOVEMETHOD_LEAVE    = 2,
+    GROUP_REMOVEMETHOD_KICK_LFG = 3
+};
+```
+
+* `GROUP_REMOVEMETHOD_DEFAULT`: The default method for removing a player from the group.
+* `GROUP_REMOVEMETHOD_KICK`: The player is kicked from the group.
+* `GROUP_REMOVEMETHOD_LEAVE`: The player leaves the group voluntarily.
+* `GROUP_REMOVEMETHOD_KICK_LFG`: The player is kicked from the group through the LFG system.
+
+## SameSubGroup
+Determines if two players are in the same subgroup within the group.
+
+### Parameters
+- player1: [Player](./player.md) - The first player to check
+- player2: [Player](./player.md) - The second player to check
+
+### Returns
+- boolean - Returns 'true' if the players are in the same subgroup, 'false' otherwise.
+
+### Example Usage
+This example demonstrates how to use the `SameSubGroup` method to determine if two players are in the same subgroup within a group. It checks if the group leader and a random member are in the same subgroup, and sends a message to the group based on the result.
+
+```typescript
+const CheckSubgroupMembers: GroupEventOnLeaderChange = (event: number, group: Group, newLeader: Player, oldLeader: Player) => {
+    // Get a random member from the group
+    const members = group.GetMembers();
+    const randomMember = members[Math.floor(Math.random() * members.length)];
+
+    // Check if the new leader and the random member are in the same subgroup
+    const sameSubgroup = group.SameSubGroup(newLeader, randomMember);
+
+    // Prepare the message based on the result
+    let message = "";
+    if (sameSubgroup) {
+        message = `The new group leader ${newLeader.GetName()} and member ${randomMember.GetName()} are in the same subgroup.`;
+    } else {
+        message = `The new group leader ${newLeader.GetName()} and member ${randomMember.GetName()} are in different subgroups.`;
+    }
+
+    // Send the message to the group
+    group.SendPacket(message);
+};
+
+RegisterGroupEvent(GroupEvents.GROUP_EVENT_ON_LEADER_CHANGE, (...args) => CheckSubgroupMembers(...args));
+```
+
+In this example:
+1. We register a group event handler for the `GROUP_EVENT_ON_LEADER_CHANGE` event using `RegisterGroupEvent`.
+2. Inside the event handler `CheckSubgroupMembers`, we retrieve a random member from the group using `group.GetMembers()` and random selection.
+3. We call the `SameSubGroup` method, passing the new leader (`newLeader`) and the randomly selected member (`randomMember`) as arguments to determine if they are in the same subgroup.
+4. Based on the result of `SameSubGroup`, we prepare an appropriate message indicating whether the new leader and the random member are in the same subgroup or different subgroups.
+5. Finally, we send the message to the entire group using `group.SendPacket(message)`.
+
+This script showcases how the `SameSubGroup` method can be used to check the subgroup relationship between two players within a group, allowing for customized actions or messages based on the result.
+
+## SendPacket
+Sends a specified [WorldPacket](./worldpacket.md) to all players in the [Group](./group.md), with the option to ignore certain players based on their status or GUID.
+
+### Parameters
+* packet: [WorldPacket](./worldpacket.md) - The WorldPacket to send to the group members.
+* ignorePlayersInBg: boolean - If set to true, players in a battleground will not receive the packet.
+* ignore: number - The GUID of a player to ignore when sending the packet.
+
+### Example Usage
+This example demonstrates how to use the `SendPacket` method to send a custom message to all group members, excluding players in a battleground and a specific player identified by their GUID.
+
+```typescript
+const IGNORED_PLAYER_GUID = 12345;
+
+function SendCustomGroupMessage(group: Group, message: string) {
+    // Create a new WorldPacket
+    const packet = new WorldPacket(0, message.length);
+    packet.WriteString(message);
+
+    // Send the packet to the group, ignoring players in BGs and the specified player
+    group.SendPacket(packet, true, IGNORED_PLAYER_GUID);
+}
+
+// Example usage in an event
+const OnGroupMemberJoin: group_event_on_member_join = (event: number, group: Group, guid: number): void => {
+    const welcomeMessage = `Welcome to the group, player with GUID ${guid}!`;
+    SendCustomGroupMessage(group, welcomeMessage);
+
+    // Notify the group leader about the new member
+    const leader = group.GetLeader();
+    if (leader && leader.GetGUID() !== guid) {
+        const leaderNotification = `Player with GUID ${guid} has joined your group.`;
+        const leaderPacket = new WorldPacket(0, leaderNotification.length);
+        leaderPacket.WriteString(leaderNotification);
+        leader.SendPacket(leaderPacket);
+    }
+};
+
+RegisterGroupEvent(GroupEvents.GROUP_EVENT_ON_MEMBER_JOIN, (...args) => OnGroupMemberJoin(...args));
+```
+
+In this example, when a new player joins the group, a custom welcome message is sent to all group members using the `SendCustomGroupMessage` function. The function creates a new `WorldPacket` with the message and sends it to the group using `SendPacket`, ignoring players in battlegrounds and a specific player identified by their GUID.
+
+Additionally, the group leader receives a separate notification about the new member, using the `GetLeader` method to retrieve the leader's [Player](./player.md) object and sending them a personalized message using `SendPacket`.
+
+This showcases how the `SendPacket` method can be used in combination with other group-related methods and events to create custom group messaging and notifications.
+
+## SetLeader
+Sets the leader of the [Group] to the player with the specified GUID.
+
+### Parameters
+* guid: number - The GUID of the player to set as the leader of the [Group].
+
+### Example Usage
+```typescript
+// Event handler for when a player logs in
+const OnLogin: player_event_on_login = (event: PlayerEvents, player: Player) => {
+    // Get the player's GUID
+    const playerGuid = player.GetGUID();
+
+    // Get the player's group
+    const group = player.GetGroup();
+
+    if (group) {
+        // Check if the player is the group leader
+        if (group.GetLeaderGUID() !== playerGuid) {
+            // If the player is not the leader, check if they have a specific item
+            const requiredItem = 1234; // Replace with the desired item entry
+            const hasItem = player.HasItem(requiredItem);
+
+            if (hasItem) {
+                // If the player has the required item, set them as the group leader
+                group.SetLeader(playerGuid);
+
+                // Send a message to the group announcing the new leader
+                const leaderName = player.GetName();
+                group.SendGroupMessage(`${leaderName} is now the group leader.`);
+            } else {
+                // If the player doesn't have the required item, send them a message
+                player.SendBroadcastMessage("You need a specific item to become the group leader.");
+            }
+        }
+    } else {
+        // If the player is not in a group, send them a message
+        player.SendBroadcastMessage("You are not currently in a group.");
+    }
+};
+
+// Register the event handler
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, OnLogin);
+```
+
+In this example, when a player logs in, the script checks if they are in a group. If they are in a group but not the current leader, it checks if the player has a specific item (you can replace the `requiredItem` variable with the desired item entry). If the player has the required item, they are set as the new group leader using the `SetLeader` method, and a message is sent to the group announcing the new leader. If the player doesn't have the required item, they receive a message indicating that they need a specific item to become the group leader. If the player is not in a group, they receive a message stating that they are not currently in a group.
+
+This example demonstrates how the `SetLeader` method can be used in a practical scenario where a player needs to meet certain conditions (e.g., having a specific item) to become the group leader. It also showcases additional group-related functionality, such as checking the current leader, sending group messages, and handling cases where the player is not in a group.
+
+## SetMembersGroup
+Sets the subgroup for a member of the group based on their GUID. This is useful for organizing members within a group, such as setting up roles or class assignments.
+
+### Parameters
+* guid: number - The GUID of the group member to change subgroups
+* groupID: number - The subgroup ID to assign the member to (0-7)
+
+### Example Usage
+```typescript
+// Get the group of the player
+const group = player.GetGroup();
+
+// Only run if player is in a group
+if (group) {
+    // Set up an array of roles
+    const roles = ["Tank", "Healer", "DPS", "DPS", "DPS"];
+
+    // Loop through each member of the group
+    group.GetMembers().forEach((member, index) => {
+        // Get the player object of the member
+        const memberPlayer = member.GetPlayer();
+
+        // Assign the member to a subgroup based on their role
+        if (memberPlayer) {
+            if (memberPlayer.GetClass() === Classes.CLASS_WARRIOR || memberPlayer.GetClass() === Classes.CLASS_DRUID) {
+                // Assign tanks to subgroup 0
+                group.SetMembersGroup(member.GetGUID(), 0);
+            } else if (memberPlayer.GetClass() === Classes.CLASS_PRIEST || memberPlayer.GetClass() === Classes.CLASS_PALADIN || memberPlayer.GetClass() === Classes.CLASS_SHAMAN) {
+                // Assign healers to subgroup 1
+                group.SetMembersGroup(member.GetGUID(), 1);
+            } else {
+                // Assign DPS to subgroups 2-4 based on the index
+                group.SetMembersGroup(member.GetGUID(), index % 3 + 2);
+            }
+        }
+    });
+
+    // Send a message to the group leader about the subgroup assignments
+    const leader = group.GetLeader();
+    if (leader) {
+        leader.SendBroadcastMessage("Group members have been assigned to subgroups based on their roles.");
+    }
+}
+```
+
+In this example, we first check if the player is in a group. If they are, we set up an array of roles (Tank, Healer, DPS) and loop through each member of the group. For each member, we get their player object and assign them to a subgroup based on their class. 
+
+Tanks (Warriors and Druids) are assigned to subgroup 0, healers (Priests, Paladins, and Shamans) are assigned to subgroup 1, and DPS are assigned to subgroups 2-4 based on their index in the group.
+
+Finally, we send a message to the group leader informing them that the subgroups have been assigned based on roles.
+

@@ -1,11 +1,12 @@
 - [About](/)
 - Eluna Typescript
     - Getting Started
-    - Configuration
-    - API Docs
-        - Events
-        - Classes
-        - Types
+    - Configuration    
+    - Classes
+        - [Creature](.classes/Creature.md)
+        - [GameObject](./classes/GameObject.md)
+    - Events        
+    - Enums
     - Examples
     - Release Notes 
 - WoW 3.3.5 Client Patcher

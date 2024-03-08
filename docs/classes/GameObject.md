@@ -1,7 +1,7 @@
 ## Despawn
 Despawns the GameObject from the game world. The GameObject may be automatically respawned by the core based on its respawn settings.
 
-#### Example Usage:
+### Example Usage:
 This example demonstrates how to despawn a GameObject after a player interacts with it, and then respawn it after a specified duration.
 
 ```typescript

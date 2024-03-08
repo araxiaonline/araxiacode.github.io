@@ -1,14 +1,15 @@
 <!-- _coverpage.md -->
 
-![logo](_media/icon.svg)
+![logo](_media/logo.png)
 
-# docsify <small>3.5</small>
+# AraxiaCode <small>alpha</small>
 
-> A magical documentation site generator.
+> Open Source Projecs For World of Warcraft Private Servers
 
-- Simple and lightweight
-- No statically built html files
-- Multiple themes
+- Server Modes for AzerothCore
+- OSS Client Patcher
+- Scripts for modding TrinityCore and Azerothcore gameplay
+- Guides from personal server operators.  
 
-[GitHub](https://github.com/docsifyjs/docsify/)
-[Get Started](#docsify)
+[GitHub](https://github.com/araxiaonline/)
+[Get Started](#About)

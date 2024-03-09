@@ -8885,3 +8885,562 @@ RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_USE_ITEM, (...args) => onItemUs
 ```
 These examples demonstrate how the ResetTypeCooldowns method can be used in different scenarios to create unique gameplay mechanics or to provide utility to players. By resetting cooldowns for specific spell categories, you can alter the pacing of combat or allow players to use certain abilities more frequently than normally allowed.
 
+## ResurrectPlayer
+Resurrects the player, setting their health to a percentage of their maximum health and optionally applying resurrection sickness.
+
+### Parameters
+* healthPercent?: number - (Optional) The percentage of the player's maximum health to set their current health to upon resurrection. If not provided, it defaults to 100% (full health).
+* ressSickness?: boolean - (Optional) If set to true, the player will suffer from resurrection sickness upon being resurrected. If not provided, it defaults to false (no resurrection sickness).
+
+### Example Usage
+Here's an example of how to use the `ResurrectPlayer` method in a script that listens for the `PLAYER_EVENT_ON_DEATH` event and resurrects the player with 50% health and no resurrection sickness if they have a specific item in their inventory:
+
+```typescript
+const RESURRECTION_ITEM_ENTRY = 12345;
+
+const OnPlayerDeath: player_event_on_death = (event: number, player: Player, killer: Unit) => {
+    // Check if the player has the required resurrection item
+    const hasResurrectionItem = player.HasItem(RESURRECTION_ITEM_ENTRY);
+
+    if (hasResurrectionItem) {
+        // Remove the resurrection item from the player's inventory
+        player.RemoveItem(RESURRECTION_ITEM_ENTRY, 1);
+
+        // Resurrect the player with 50% health and no resurrection sickness
+        player.ResurrectPlayer(50, false);
+
+        // Send a message to the player
+        player.SendBroadcastMessage("You have been resurrected by the power of the resurrection item!");
+    } else {
+        // Send a message to the player
+        player.SendBroadcastMessage("You do not have the required resurrection item. Use a spirit healer to resurrect.");
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_DEATH, (...args) => OnPlayerDeath(...args));
+```
+
+In this example:
+1. We define a constant `RESURRECTION_ITEM_ENTRY` with the entry ID of the item required for resurrection.
+2. We register a callback function `OnPlayerDeath` to handle the `PLAYER_EVENT_ON_DEATH` event.
+3. Inside the callback function, we check if the player has the resurrection item using the `HasItem` method.
+4. If the player has the item:
+   - We remove one instance of the resurrection item from their inventory using `RemoveItem`.
+   - We resurrect the player using `ResurrectPlayer`, setting their health to 50% and disabling resurrection sickness.
+   - We send a message to the player informing them about the resurrection.
+5. If the player doesn't have the item:
+   - We send a message to the player instructing them to use a spirit healer for resurrection.
+
+This script allows players with a specific resurrection item to be resurrected with partial health and no resurrection sickness upon death, providing a unique gameplay mechanic.
+
+## RewardQuest
+Rewards the player with items, gold, and experience based on the provided quest entry upon completion of the quest. The player must have completed the quest and not have already been rewarded for this to succeed.  Quest rewards are defined in the quest_template table of the World Database.  For more information and examples see: https://www.azerothcore.org/wiki/quest_template
+
+### Parameters
+* entry: number - The quest entry ID from the quest_template table
+
+### Example Usage
+Reward the player with triple the gold reward for turning in a repeatable or daily quest, otherwise reward normally.
+```typescript
+// NPC Emissary of Gold
+const EMISSARY_OF_GOLD_QUEST = 12345;  
+
+const QuestReward: player_event_on_quest_reward = (event: number, player: Player, quest: Quest) => {
+    const questEntry = quest.GetEntry();
+
+    if (questEntry !== EMISSARY_OF_GOLD_QUEST) {
+        // Reward normally for non-Emissary of Gold quests
+        player.RewardQuest(questEntry);
+        return;
+    }
+
+    // Get the quest template and verify it's valid
+    const questTemplate = quest.GetQuestTemplate();
+    if (!questTemplate) {
+        player.SendBroadcastMessage("Invalid quest template for Emissary of Gold");
+        return;
+    }
+
+    // Calculate triple gold reward & convert copper to gold for display
+    const goldReward = (questTemplate.GetRewMoney() * 3) / 10000;
+
+    // Grant triple gold and quest reward
+    player.ModifyMoney(goldReward);
+    player.SendBroadcastMessage(`You have earned a bonus of ${goldReward} gold for completing the Emissary of Gold quest!`);
+    player.RewardQuest(questEntry);
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_QUEST_REWARD, (...args) => QuestReward(...args));
+```
+
+This script does the following:
+1. Defines the quest entry for the special "Emissary of Gold" quest 
+2. Registers a player event handler for the `PLAYER_EVENT_ON_QUEST_REWARD` event
+3. When a player turns in a quest, it checks if it is the Emissary of Gold quest
+4. If not, it rewards the quest normally using `RewardQuest`
+5. If it is the Emissary quest:
+   - It retrieves the quest template to access reward data
+   - Calculates triple the normal gold reward 
+   - Grants the bonus gold to the player
+   - Sends the player a message about their gold bonus
+   - Rewards the quest normally, granting remaining rewards like items and experience
+
+So in summary, this script allows you to define special reward handling for specific quests, while still ensuring the default rewards are granted. It's a useful pattern for quest turn-in scripts that modify or enhance rewards.
+
+## SaveToDB
+This method saves the player's current state and all associated data to the database. It ensures that any changes made to the player's attributes, inventory, quest progress, or other relevant information persist across server restarts or disconnections.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+This method does not return any value.
+
+### Example Usage
+Let's consider a scenario where a player completes a custom quest and receives a unique item as a reward. We want to ensure that the player's progress and the newly acquired item are saved to the database immediately after the quest completion.
+
+```typescript
+const CUSTOM_QUEST_ENTRY = 9001;
+const UNIQUE_REWARD_ITEM_ENTRY = 1234;
+
+const onQuestComplete: player_event_on_quest_finished = (event: number, player: Player, quest: number): void => {
+    if (quest === CUSTOM_QUEST_ENTRY) {
+        // Reward the player with the unique item
+        const rewardItem = player.AddItem(UNIQUE_REWARD_ITEM_ENTRY, 1);
+
+        if (rewardItem) {
+            // Send a message to the player
+            player.SendBroadcastMessage(`Congratulations! You have completed the quest and received a unique reward.`);
+
+            // Update the player's quest status in the database
+            player.RewardQuest(CUSTOM_QUEST_ENTRY);
+
+            // Save the player's progress and inventory to the database
+            player.SaveToDB();
+
+            // Optionally, you can also save the player's position and orientation
+            const playerPosition = player.GetLocation();
+            const playerOrientation = player.GetOrientation();
+            CharDBQuery(`UPDATE characters SET position_x = ${playerPosition.x}, position_y = ${playerPosition.y}, position_z = ${playerPosition.z}, orientation = ${playerOrientation} WHERE guid = ${player.GetGUID()}`);
+        } else {
+            // Handle the case when adding the item fails (e.g., inventory is full)
+            player.SendBroadcastMessage(`Your inventory is full. Please make space and complete the quest again.`);
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_QUEST_FINISHED, (...args) => onQuestComplete(...args));
+```
+
+In this example:
+1. We define a custom quest entry (`CUSTOM_QUEST_ENTRY`) and a unique reward item entry (`UNIQUE_REWARD_ITEM_ENTRY`).
+2. We register a player event handler for the `PLAYER_EVENT_ON_QUEST_FINISHED` event.
+3. When the player completes the specified custom quest, we reward them with the unique item using `player.AddItem()`.
+4. If the item is successfully added to the player's inventory, we send a congratulatory message to the player using `player.SendBroadcastMessage()`.
+5. We update the player's quest status in the database using `player.RewardQuest()`.
+6. We save the player's progress and inventory to the database using `player.SaveToDB()`.
+7. Optionally, we also save the player's current position and orientation to the database using a direct database query with `CharDBQuery()`.
+8. If adding the item fails (e.g., due to a full inventory), we send an appropriate message to the player.
+
+By calling `player.SaveToDB()` after making important changes to the player's state, we ensure that the progress is persisted in the database and will be retained even if the server restarts or the player disconnects.
+
+## Say
+Sends a message as the player to nearby players in the game world.
+
+### Parameters
+* text: string - The message to send
+* lang: [Language](../language.md) - The language the message should be sent as (common, dwarvish, etc.)
+
+### Example Usage
+Send a message based on a player's class when they enter the world:
+```typescript
+const CLASS_GREETINGS = {
+    [Classes.CLASS_WARRIOR]: "I am ready to fight!",
+    [Classes.CLASS_PALADIN]: "The Light will guide us.",
+    [Classes.CLASS_HUNTER]: "Time to hunt!",
+    [Classes.CLASS_ROGUE]: "Sneaking in the shadows...",
+    [Classes.CLASS_PRIEST]: "Let me heal your wounds.",
+    [Classes.CLASS_DEATH_KNIGHT]: "The Scourge will rise again!",
+    [Classes.CLASS_SHAMAN]: "The elements are restless today.",
+    [Classes.CLASS_MAGE]: "Knowledge is power!",
+    [Classes.CLASS_WARLOCK]: "Darkness calls.",
+    [Classes.CLASS_DRUID]: "Nature's balance must be preserved."
+};
+
+const OnLogin: player_event_on_login = (event: number, player: Player) => {
+    const className = player.GetClass();
+    const greeting = CLASS_GREETINGS[className];
+
+    if (greeting) {
+        player.Say(greeting, Language.LANG_UNIVERSAL);
+    } else {
+        player.Say("Greetings!", Language.LANG_UNIVERSAL);
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => OnLogin(...args));
+```
+In this example, when a player logs in, the script checks their class and sends a personalized greeting message to nearby players using the `Say` method. The message is sent in the universal language so that all players can understand it regardless of their client's language settings.
+
+## SendAddonMessage
+Sends an addon message to the specified player receiver. This method allows communication between the server and client addons, enabling data exchange and synchronization.
+
+### Parameters
+* prefix: string - The addon message prefix, which identifies the addon or the purpose of the message.
+* message: string - The actual content of the addon message.
+* channel: number - The communication channel on which the message will be sent. Valid channels are:
+  - 0: ADDON_CHANNEL_GUILD
+  - 1: ADDON_CHANNEL_PARTY
+  - 2: ADDON_CHANNEL_RAID
+* receiver: [Player](./player.md) - The player who will receive the addon message.
+
+### Example Usage:
+Sending a custom addon message to a player when they enter a specific area.
+```typescript
+const ADDON_PREFIX = "MyAddon";
+const AREA_TRIGGER_ID = 1234;
+
+const onAreaTrigger: player_event_on_area_trigger = (event: number, player: Player, areaTrigger: AreaTrigger) => {
+    if (areaTrigger.GetEntry() === AREA_TRIGGER_ID) {
+        const message = JSON.stringify({
+            type: "AreaEntered",
+            data: {
+                areaId: AREA_TRIGGER_ID,
+                timestamp: GetGameTime(),
+            },
+        });
+
+        player.SendAddonMessage(ADDON_PREFIX, message, 0, player);
+
+        // Alternatively, send the message to all group members
+        const group = player.GetGroup();
+        if (group) {
+            const groupMembers = group.GetMembers();
+            for (const member of groupMembers) {
+                player.SendAddonMessage(ADDON_PREFIX, message, 1, member);
+            }
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_AREA_TRIGGER, (...args) => onAreaTrigger(...args));
+```
+In this example:
+1. When a player enters a specific area trigger (identified by `AREA_TRIGGER_ID`), the script generates an addon message.
+2. The addon message is a JSON-formatted string containing the type of event ("AreaEntered") and relevant data (area ID and timestamp).
+3. The message is sent to the player who triggered the event using `SendAddonMessage()` with the `ADDON_CHANNEL_GUILD` channel.
+4. Additionally, if the player is part of a group, the script retrieves the group members and sends the addon message to each member using the `ADDON_CHANNEL_PARTY` channel.
+
+This example demonstrates how `SendAddonMessage()` can be used to communicate important events or data to the player's addon, enabling the addon to react or display information accordingly. The JSON formatting allows for structured data exchange between the server and client addons.
+
+## SendAreaTriggerMessage
+This method sends an area trigger message to the player's chat window. Area trigger messages are often used to display information or instructions to the player when they enter a specific area or trigger a certain event in the game world.
+
+### Parameters
+* message: string - The message to be displayed in the player's chat window.
+
+### Example Usage
+Here's an example of how to use `SendAreaTriggerMessage` to guide a player through a custom scripted event:
+
+```typescript
+const AREA_TRIGGER_ID = 1234;
+const BOSS_CREATURE_ENTRY = 5678;
+
+const AreaTrigger: player_event_on_area_trigger = (event: number, player: Player, triggerId: number) => {
+    if (triggerId === AREA_TRIGGER_ID) {
+        player.SendAreaTriggerMessage("You have entered the boss's lair. Prepare for battle!");
+
+        // Spawn the boss creature
+        const boss = player.GetMap().SpawnCreature(BOSS_CREATURE_ENTRY, player.GetX(), player.GetY(), player.GetZ(), player.GetO(), 0, player.GetPhaseMask());
+
+        // Set the boss as hostile to the player
+        boss.SetReactState(ReactStates.REACT_AGGRESSIVE);
+        boss.AddThreat(player, 1);
+
+        // Start a timer to check if the player has defeated the boss
+        let timerCount = 0;
+        const checkBossDefeated = () => {
+            if (!boss.IsAlive()) {
+                player.SendAreaTriggerMessage("Congratulations! You have defeated the boss and completed the challenge.");
+                // Reward the player with items or experience points
+                player.AddItem(REWARD_ITEM_ENTRY, 1);
+                player.GiveXP(1000, null);
+            } else if (timerCount >= 30) {
+                player.SendAreaTriggerMessage("You have failed to defeat the boss in time. The challenge has ended.");
+                boss.DespawnOrUnsummon(0);
+            } else {
+                timerCount++;
+                timer.lastTimer(1000, checkBossDefeated);
+            }
+        };
+
+        timer.lastTimer(1000, checkBossDefeated);
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_AREA_TRIGGER, (...args) => AreaTrigger(...args));
+```
+
+In this example:
+1. When the player enters a specific area trigger (identified by `AREA_TRIGGER_ID`), the script sends an area trigger message to inform the player that they have entered the boss's lair.
+2. The script then spawns the boss creature (identified by `BOSS_CREATURE_ENTRY`) at the player's location and sets it as hostile to the player.
+3. A timer is started to periodically check if the player has defeated the boss.
+   - If the boss is defeated, the player receives a congratulatory message and is rewarded with an item and experience points.
+   - If the timer reaches 30 seconds and the boss is still alive, the player receives a message indicating that they have failed the challenge, and the boss is despawned.
+
+This example demonstrates how `SendAreaTriggerMessage` can be used in combination with other scripting methods to create engaging and interactive events for players.
+
+## SendAuctionMenu
+Sends an auction house window to the player from the specified unit. This allows the player to interact with the auction house, browse listings, and make purchases or sales.
+
+### Parameters
+* sender: [Unit](./unit.md) - The unit (usually an NPC) that represents the auction house.
+
+### Example Usage
+Here's an example of how to create an NPC that opens the auction house window for players when interacted with:
+
+```typescript
+const AUCTIONEER_ENTRY = 1234; // Replace with the actual NPC entry ID
+
+const OnGossipHello: creature_event_on_gossip_hello = (event: number, player: Player, creature: Creature) => {
+    if (creature.GetEntry() === AUCTIONEER_ENTRY) {
+        player.SendAuctionMenu(creature);
+        player.SendGossipComplete();
+    }
+};
+
+const OnGossipSelect: creature_event_on_gossip_select = (event: number, player: Player, creature: Creature, sender: number, action: number) => {
+    if (creature.GetEntry() === AUCTIONEER_ENTRY) {
+        player.SendAuctionMenu(creature);
+        player.SendGossipComplete();
+    }
+};
+
+RegisterCreatureEvent(AUCTIONEER_ENTRY, CreatureEvents.CREATURE_EVENT_ON_GOSSIP_HELLO, (...args) => OnGossipHello(...args));
+RegisterCreatureEvent(AUCTIONEER_ENTRY, CreatureEvents.CREATURE_EVENT_ON_GOSSIP_SELECT, (...args) => OnGossipSelect(...args));
+```
+
+In this example:
+1. We define the entry ID of the auctioneer NPC (`AUCTIONEER_ENTRY`).
+2. We register two event handlers for the auctioneer NPC:
+   - `OnGossipHello`: Triggered when the player interacts with the NPC.
+   - `OnGossipSelect`: Triggered when the player selects an option from the NPC's gossip menu.
+3. In both event handlers, we check if the interacted creature is the auctioneer NPC by comparing its entry ID.
+4. If it is the auctioneer NPC, we send the auction house window to the player using `player.SendAuctionMenu(creature)`.
+5. We also call `player.SendGossipComplete()` to close the gossip window after sending the auction house window.
+
+With this script, whenever a player interacts with the specified auctioneer NPC, the auction house window will open, allowing them to browse and participate in auctions.
+
+Note: Make sure to replace `AUCTIONEER_ENTRY` with the actual entry ID of the NPC you want to use as the auctioneer in your Azerothcore server.
+
+## SendBroadcastMessage
+This method sends a broadcast message to the player's screen. The message appears in the center of the screen and is visible to the player only.
+
+### Parameters
+* message: string - The message to be displayed on the player's screen.
+
+### Example Usage
+Here's an example of how to use the `SendBroadcastMessage` method to display a message to the player when they enter a specific area:
+
+```typescript
+const STORMWIND_AREA_ID = 1519;
+const WELCOME_MESSAGE = "Welcome to Stormwind City, defender of the Alliance!";
+
+const OnPlayerEnterArea: player_event_on_enter_area = (event: number, player: Player, newArea: Area, oldArea: Area) => {
+    if (newArea.GetAreaId() === STORMWIND_AREA_ID) {
+        player.SendBroadcastMessage(WELCOME_MESSAGE);
+
+        // Additional actions or effects can be added here
+        player.AddAura(48102, player); // Add "Stamina" aura to the player
+        player.AddItem(HEARTHSTONE_ITEM_ID, 1); // Give the player a Hearthstone if they don't have one
+
+        // Create a timed event to display a follow-up message after 5 seconds
+        CreateLuaEvent((function() {
+            player.SendBroadcastMessage("Don't forget to visit the Embassy Quarter for important quests!");
+        }).bind(this), 5000, 1);
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_ENTER_AREA, (...args) => OnPlayerEnterArea(...args));
+```
+
+In this example:
+1. We define constants for the Stormwind City area ID and the welcome message.
+2. We register the `OnPlayerEnterArea` event handler using `RegisterPlayerEvent`.
+3. When the player enters an area, the `OnPlayerEnterArea` function is called.
+4. We check if the entered area is Stormwind City by comparing the `newArea`'s ID with the `STORMWIND_AREA_ID`.
+5. If the player has entered Stormwind City, we send the welcome message using `player.SendBroadcastMessage(WELCOME_MESSAGE)`.
+6. Additionally, we apply the "Stamina" aura to the player using `player.AddAura(48102, player)` to give them a temporary buff.
+7. We also check if the player has a Hearthstone in their inventory, and if not, we give them one using `player.AddItem(HEARTHSTONE_ITEM_ID, 1)`.
+8. Finally, we create a timed event using `CreateLuaEvent` to display a follow-up message after a 5-second delay. The message reminds the player to visit the Embassy Quarter for important quests.
+
+This example demonstrates how to use the `SendBroadcastMessage` method in combination with other methods and game events to create an immersive experience for the player when they enter a specific area.
+
+## SendCinematicStart
+Starts a cinematic sequence for the player based on the provided cinematic sequence ID. These cinematics can be referenced in the World Database cinematic_sequences table. For more information about cinematics, you can find more details here: https://www.azerothcore.org/wiki/cinematic_sequences.
+
+### Parameters
+* CinematicSequenceId: number - The ID of the cinematic sequence to start, as defined in the cinematic_sequences table.
+
+### Example Usage:
+Create a custom scripted event that triggers a cinematic for players who complete a specific quest.
+```typescript
+const QUEST_ENTRY = 12345;
+const CINEMATIC_SEQUENCE_ID = 678;
+
+const QuestComplete: player_event_on_quest_complete = (event: number, player: Player, quest: Quest) => {
+    if (quest.GetEntry() === QUEST_ENTRY) {
+        // Check if the player is in the correct map and zone for the cinematic
+        if (player.GetMapId() === 1 && player.GetZoneId() === 1234) {
+            // Start the cinematic sequence for the player
+            player.SendCinematicStart(CINEMATIC_SEQUENCE_ID);
+
+            // Delay the player's teleportation to the next area by 10 seconds
+            player.AddDelayedEvent(10000, () => {
+                player.Teleport(0, -8800.0, 645.0, 94.0, 0.6);
+            });
+        } else {
+            // If the player is not in the correct location, send a message
+            player.SendBroadcastMessage("You must be in the correct area to view the cinematic.");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_QUEST_COMPLETE, (...args) => QuestComplete(...args));
+```
+In this example, when a player completes a specific quest (with entry 12345), the script checks if the player is in the correct map and zone. If the player is in the correct location, the cinematic sequence (with ID 678) is started using the `SendCinematicStart` method.
+
+After starting the cinematic, a delayed event is added to teleport the player to a specific location 10 seconds later, allowing time for the cinematic to play before moving the player to the next area.
+
+If the player is not in the correct location when completing the quest, a broadcast message is sent to inform them that they must be in the correct area to view the cinematic.
+
+This example demonstrates how to use the `SendCinematicStart` method in combination with other player methods and events to create an immersive quest experience with a cinematic sequence.
+
+## SendGuildInvite
+Sends a guild invitation from the [Player]'s [Guild](./guild.md) to the target [Player](./player.md).
+
+### Parameters
+* invitee: [Player](./player.md) - The player to send the guild invite to.
+
+### Example Usage
+This example demonstrates how to create a script that allows a player to invite another player to their guild by targeting them and using the `.guildinvite` command.
+
+```typescript
+// Variable to store the last player that was targeted
+let targetedPlayer: Player | null = null;
+
+// Handler for the .guildinvite command
+const handleGuildInviteCommand: command_script_handler = (player: Player, command: string) => {
+    // Check if the player has a guild
+    if (!player.GetGuild()) {
+        player.SendBroadcastMessage("You must be in a guild to invite players.");
+        return;
+    }
+
+    // Check if the player has a valid invite target
+    if (!targetedPlayer) {
+        player.SendBroadcastMessage("You must target a player to invite them to your guild.");
+        return;
+    }
+
+    // Check if the targeted player is already in a guild
+    if (targetedPlayer.GetGuild()) {
+        player.SendBroadcastMessage(`${targetedPlayer.GetName()} is already in a guild.`);
+        return;
+    }
+
+    // Send the guild invite to the targeted player
+    player.SendGuildInvite(targetedPlayer);
+    player.SendBroadcastMessage(`You have invited ${targetedPlayer.GetName()} to join your guild.`);
+};
+
+// Handler for the PLAYER_EVENT_ON_TARGET_CHANGED event
+const handlePlayerTargetChanged: player_event_on_target_changed = (event: number, player: Player, target: WorldObject) => {
+    // Check if the target is a player
+    if (target && target.IsPlayer()) {
+        targetedPlayer = target.ToPlayer();
+    } else {
+        targetedPlayer = null;
+    }
+};
+
+// Register the event handlers
+RegisterCommandScriptHandler("guildinvite", handleGuildInviteCommand);
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_TARGET_CHANGED, handlePlayerTargetChanged);
+```
+
+In this example:
+
+1. We create a variable `targetedPlayer` to store the last player that was targeted by the player using the `.guildinvite` command.
+
+2. We define a command handler for the `.guildinvite` command that checks if the player is in a guild, has a valid invite target, and if the target is not already in a guild. If all conditions are met, it sends a guild invite to the targeted player using `player.SendGuildInvite(targetedPlayer)`.
+
+3. We define an event handler for the `PLAYER_EVENT_ON_TARGET_CHANGED` event that updates the `targetedPlayer` variable whenever the player targets a new unit. If the target is a player, it is stored in `targetedPlayer`, otherwise `targetedPlayer` is set to `null`.
+
+4. Finally, we register the command handler and event handler using `RegisterCommandScriptHandler` and `RegisterPlayerEvent` respectively.
+
+With this script, players can target another player and use the `.guildinvite` command to send them a guild invitation, provided they meet the necessary conditions.
+
+## SendListInventory
+This method sends a vendor window to the player from a specified WorldObject. The WorldObject can be any object in the game world that has an inventory, such as a vendor NPC or a container object.
+
+### Parameters
+* sender: [WorldObject](./worldobject.md) - The WorldObject to send the vendor window from.
+
+### Example Usage
+Here's an example of how to use the `SendListInventory` method to create a custom vendor NPC that sells items based on the player's reputation with a specific faction:
+
+```typescript
+const FACTION_ENTRY = 1050; // Replace with the desired faction entry
+const REPUTATION_LEVEL = 3; // Friendly
+
+const VendorInteraction: gossip_event_on_hello = (event, player, object) => {
+    if (player.GetReputationRank(FACTION_ENTRY) >= REPUTATION_LEVEL) {
+        // Player has the required reputation, send the vendor window
+        player.SendListInventory(object);
+    } else {
+        // Player doesn't have enough reputation
+        player.SendBroadcastMessage("You need to be at least Friendly with our faction to access these goods.");
+        player.GossipComplete();
+    }
+};
+
+const VendorSelectOption: gossip_event_on_select = (event, player, object, sender, intid, code, menu_id) => {
+    // Handle gossip select option
+    if (intid == 1) {
+        // Option 1: Send the vendor window
+        player.SendListInventory(object);
+    } else if (intid == 2) {
+        // Option 2: Additional functionality
+        player.SendBroadcastMessage("You selected option 2.");
+        player.GossipComplete();
+    }
+};
+
+const LoadVendor = () => {
+    const vendorEntry = 123456; // Replace with the desired vendor NPC entry
+    const vendorGossipId = 98765; // Replace with the desired gossip menu ID
+
+    // Register gossip events for the vendor NPC
+    RegisterGossipEvent(vendorEntry, GossipEvents.GOSSIP_EVENT_ON_HELLO, VendorInteraction);
+    RegisterGossipEvent(vendorEntry, GossipEvents.GOSSIP_EVENT_ON_SELECT, VendorSelectOption);
+
+    // Add gossip menu items to the vendor NPC
+    GossipAddMenuItem(vendorGossipId, 0, GossipOptionIcon.GOSSIP_ICON_VENDOR, "Show me your goods.", 1);
+    GossipAddMenuItem(vendorGossipId, 0, GossipOptionIcon.GOSSIP_ICON_CHAT, "Tell me more about your faction.", 2);
+
+    // Bind the gossip menu to the vendor NPC
+    BindGossipMenuToNPC(vendorGossipId, vendorEntry);
+};
+
+LoadVendor();
+```
+
+In this example:
+1. We define the required faction entry and reputation level for accessing the vendor.
+2. In the `VendorInteraction` event, we check if the player has the required reputation. If so, we send the vendor window using `SendListInventory`. Otherwise, we send a message indicating insufficient reputation and close the gossip window.
+3. In the `VendorSelectOption` event, we handle the gossip select options. If the player selects option 1, we send the vendor window. If they select option 2, we perform additional functionality (in this case, sending a message).
+4. In the `LoadVendor` function, we register the gossip events for the vendor NPC, add gossip menu items, and bind the gossip menu to the NPC.
+
+This example demonstrates how to create a custom vendor NPC that conditionally sends the vendor window based on the player's reputation, while also providing additional gossip options for interaction.
+

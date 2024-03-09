@@ -352,3 +352,260 @@ RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_AREA_CHANGE, (...args) => onPla
 
 This example attempts to retrieve a specific NPC on the map using its GUID when a player enters a new area. If the NPC is found and is currently spawned on the map, it will say designated text, offering countless opportunities for dynamic player interactions in the game world.
 
+# IsArena
+
+Check if the current map is an Arena BattleGround. It can be useful to determine the type of battleground environment players are in to apply specific logic for arenas.
+
+### Returns
+`boolean`: Returns `true` if the current [Map](./map.md) is an Arena BattleGround, and `false` otherwise.
+
+### Example Usage:
+Prevent certain custom NPCs from spawning in Arena BattleGrounds to maintain competitive balance.
+```typescript
+const SpawnCustomNPC: custom_event_on_map_load = (event: number, map: EMap): void => {
+    // Check if the map is an Arena
+    if (!map.IsArena()) {
+        // Coordinates where the custom NPC should spawn.
+        const x = -1234.56;
+        const y = 789.10;
+        const z = 123.45;
+        const orientation = 1.23;
+        
+        // ID of the custom NPC to spawn.
+        const CUSTOM_NPC_ID = 12345;
+        
+        // Spawn the NPC if the map is not an Arena.
+        SpawnNPC(map, CUSTOM_NPC_ID, x, y, z, orientation);
+    }
+}
+
+// Register your custom logic with the appropriate map load event handler.
+RegisterMapEvent(MapEvents.MAP_EVENT_ON_LOAD, (...args) => SpawnCustomNPC(...args));
+
+function SpawnNPC(map: EMap, npcId: number, x: number, y: number, z: number, orientation: number): void {
+    // Logic to spawn the NPC at the specified location on the given map.
+    // This is a pseudo-function for demonstrative purposes.
+}
+
+```
+In this example, we register an event that fires when a map is loaded. Inside this event, we use the `IsArena()` method to check if the map is an Arena or not. If it's not an Arena, we proceed to spawn a custom NPC at specified coordinates. This ensures that our custom NPCs do not affect the balance of competitive Arena gameplay.
+
+This approach is particularly useful in custom server modifications where maintaining the integrity of competitive environments such as Arenas is crucial, while also enriching the world outside of those environments with custom NPCs or events.
+
+## IsBattleground
+Determines if the current map instance is a Battleground map that is not classified as an arena. 
+
+### Returns
+`true` if the map is a non-arena Battleground, `false` otherwise.
+
+### Example Usage:
+This script could be used within a larger function to modify player behavior or initiate specific events only when in a non-arena Battleground. 
+```typescript
+const onPlayerEnterMap: player_event_on_map = (event: number, player: Player, map: EMap): void => {
+
+    if(map.IsBattleground()) {
+        // Custom behavior or initialization for battlegrounds that are not arena
+        player.SendBroadcastMessage("Welcome to the battleground!");
+        // Additional logic to modify player behavior or initiate specific events in battleground
+    } else {
+        player.SendBroadcastMessage("This is not a battleground arena.");
+        // Logic for non-battleground areas or handling errors
+    }
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_MAP, (...args) => onPlayerEnterMap(...args));
+```
+This example demonstrates how you can utilize the `IsBattleground` method to check if the player has entered a map that is a battleground but not an arena. Depending on the result, different actions can be triggered, such as sending a welcome message to players entering battlegrounds, or handling logic for players in other types of maps.
+
+The `IsBattleground` method is useful in scenarios where specific game behavior, events, or conditions must be applied or checked only in non-arena battleground maps, providing a straightforward way of distinguishing between different types of PvP environments in the game.
+
+# IsDungeon
+
+Determines if the current map is a dungeon.
+
+### Returns
+bool: `true` if the map is a dungeon, `false` otherwise.
+
+### Example Usage
+This snippet illustrates how to check if a player is currently in a dungeon instance and perform an action accordingly. Might be useful in scenarios where specific scripts should only run within dungeon environments.
+
+```typescript
+const OnPlayerMove: player_event_on_update_zone = (event: number, player: Player): void => {
+    const playerMap = player.GetMap();
+
+    if(playerMap.IsDungeon()) {
+        // Player is in a dungeon
+        console.log(`Player ${player.GetName()} is currently in a dungeon.`);
+        // Perform further actions based on the dungeon status...
+    } else {
+        // Player is not in a dungeon
+        console.log(`Player ${player.GetName()} is not in a dungeon.`);
+    }
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_UPDATE_ZONE, (...args) => OnPlayerMove(...args));
+```
+
+This documentation and example aim to demonstrate how to efficiently utilize the `IsDungeon` method in mod-eluna on Azerothcore, empowering developers to tailor their mods based on the context of the map a player occupies.
+
+## IsEmpty
+Checks if the current game map has no players present.
+
+### Returns
+* `boolean` - Returns `true` if the map has no players, `false` otherwise.
+
+### Example Usage:
+
+This example script checks if a specific map is empty, and if so, it performs a specific action such as announcing to the server or logging for administrative purposes. The `map` object represents a specific game map on which this check is performed.
+
+```typescript
+// Example function to check if a specific map is empty and perform actions based on the result
+const checkMapEmptyAndAct: () => void = (): void => {
+    const MAP_ID = 530; // Example map ID, adjust as necessary
+    const map = GetMapById(MAP_ID); // Function to get the map object by ID, assuming it exists in your scripting environment
+
+    if (map.IsEmpty()) {
+        // If map is empty, perform certain actions
+        console.log(`Map with ID ${MAP_ID} is currently empty.`); // Example logging
+        // You could also use in-game announcements or other actions based on your server setup
+        AnnounceToServer(`The map with ID ${MAP_ID} is empty. It's a good time for maintenance or special events!`);
+    } else {
+        console.log(`Map with ID ${MAP_ID} is not empty.`);
+    }
+}
+
+// Example usage with a hypothetical server event or a timed check
+RegisterServerEvent(ServerEvents.MIDNIGHT_SERVER_MAINTENANCE_CHECK, checkMapEmptyAndAct);
+```
+
+In this example, `GetMapById` and `AnnounceToServer` are hypothetical functions that you would replace with your actual server's API functions for retrieving a map object and making server-wide announcements, respectively. The `ServerEvents.MIDNIGHT_SERVER_MAINTENANCE_CHECK` is an example of a server event that could trigger this check, adjusted as necessary to fit your server's event handling system.
+
+## IsHeroic
+Determines if the map the player is currently on is a Heroic difficulty map. Heroic maps often provide increased challenges and rewards.
+
+### Returns 
+boolean: Indicates whether the map is Heroic (`true`) or not (`false`).
+
+### Example Usage:
+This example script determines if the player is currently in a Heroic map. If so, it prints a message in the server console notifying that the player is in a Heroic instance. This could be useful for mods that adjust gameplay based on the difficulty level of the map the player is in.
+
+```typescript
+const onPlayerEnterMap: player_event_on_map_change = (event: number, player: Player, newMap: EMap): void => {
+
+    if(newMap.IsHeroic()) {
+        print(`Player ${player.GetName()} has entered a Heroic Map.`);
+    } else {
+        print(`Player ${player.GetName()} is in a non-heroic map.`);
+    }
+
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_MAP_CHANGE, (...args) => onPlayerEnterMap(...args));
+```
+
+In this example, `player_event_on_map_change` is a hypothetical event that triggers when a player changes maps, and `PLAYER_EVENT_ON_MAP_CHANGE` is the corresponding event ID. The `newMap` argument is an instance of `EMap` related to the map the player has just entered. This script utilizes the `IsHeroic()` method to determine the map's difficulty and responds accordingly.
+
+Replace `player_event_on_map_change` and `PLAYER_EVENT_ON_MAP_CHANGE` with actual event and ID applicable to your modding environment as necessary.
+
+## IsRaid
+This method determines if the current instance the player is in, is categorized as a raid. Being a critical condition for many raid-specific scripts or functionality within the game, it lets developers effortlessly adapt their scripts based on the environment the player is interacting with.
+
+### Returns
+`boolean` - A boolean value where `true` indicates the Map is a raid, and `false` indicates it is not a raid.
+
+### Example Usage:
+This example script demonstrates how you can utilize `IsRaid` to apply a specific buff to players only when they are inside a raid instance. This can be particularly useful for tuning gameplay experiences dynamically based on the players' current environment.
+
+```typescript
+const RAID_SPECIFIC_BUFF: number = 12345; // Example buff ID
+
+// Event triggered when player enters the map
+const onPlayerEnterMap: player_event_on_map_change = (event: number, player: Player): void => {
+    const currentMap = player.GetMap();
+    
+    // Check if the current map is a raid
+    if(currentMap.IsRaid()) {
+        // Apply a specific buff when the player is in a raid
+        player.CastSpell(player, RAID_SPECIFIC_BUFF, true);
+        player.SendBroadcastMessage("Welcome to the Raid! A special buff has been applied to you.");
+    } else {
+        // Notify the player they are not in a raid (optional)
+        player.SendBroadcastMessage("You are not in a Raid.");
+    }
+}
+
+// Register the event
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_MAP_CHANGE, (...args) => onPlayerEnterMap(...args));
+```
+In this script, the `IsRaid` method is pivotal for determining the player's current map context, thereby allowing the script to conditionally apply enhancements or restrictions tailored to the raiding experience. Note, `12345` in the example should be replaced with an actual buff ID relevant to your gameplay mechanics. The message and buff applied are hypothetical and should be tailored to fit the context in which you are utilizing this method.
+
+
+## SaveInstanceData
+
+Persist the current state of the map's instance data into the database. This makes any changes or progress within the instance persistent across server restarts or player re-entries, ensuring the game world remains consistent for all players interacting within the instance.
+
+### Example Usage
+
+Scenario: Automatically save instance progress after a boss is defeated to prevent loss of progress in case of unexpected server restarts. 
+
+```typescript
+const BOSS_DEFEATED_EVENT = 1; // Assuming 1 is the event ID for a boss defeat, replace with actual value
+
+const SaveInstanceProgress: creature_event_on_death = (event: number, creature: Creature, killer: Unit): void => {
+    const map = creature.GetMap();
+
+    // Check if the creature is a boss and the killer is a player (to exclude NPCs or environmental deaths)
+    if(creature.IsBoss() && killer.IsPlayer()) {
+        // Save instance data to persist the progress
+        map.SaveInstanceData();
+        console.log("Instance progress saved after boss defeat.");
+    }
+}
+
+RegisterCreatureEvent(BOSS_NPC_ID, CreatureEvents.CREATURE_EVENT_ON_DEATH, (...args) => SaveInstanceProgress(...args));
+```
+
+In this example, `creature_event_on_death` is a hypothetical event that fires when a creature dies, and `BOSS_NPC_ID` represents the NPC ID of the boss in question. Replace it with the specific NPC ID you are working with. Upon the boss' defeat, the script checks if the creature is indeed a boss and that the killer is a player before calling `SaveInstanceData()` to save the instance's current state, ensuring that players' progress through the instance is not lost unexpectedly. 
+
+Note: This example assumes the existence of the `IsBoss()` method to check if a creature is a boss. If no such method exists in your current scripting environment, you might need to check against a list of boss NPC IDs or use another indication of a boss creature.
+
+## SetWeather
+This method allows you to set the weather condition of a specific zone in the game dynamically. Weather conditions can range from clear skies to heavy rain or snow, providing an immersive experience for players. The `WeatherType` enum provides a variety of weather conditions that can be applied.
+
+### Parameters
+- `zone`: number - The zone ID where the weather condition will be applied. Zone IDs can be found in the game's data files or online resources.
+- `type`: WeatherType - The type of weather condition to set. The possible values are defined in the `WeatherType` enum, including `WEATHER_TYPE_FINE`, `WEATHER_TYPE_RAIN`, `WEATHER_TYPE_SNOW`, `WEATHER_TYPE_STORM`, `WEATHER_TYPE_THUNDERS`, and `WEATHER_TYPE_BLACKRAIN`.
+- `grade`: number - The intensity grade of the weather condition. This value can vary depending on the type of weather; for example, a higher value might represent heavier rain or thicker snow.
+
+### Example Usage:
+The script below sets the weather in Elwynn Forest (Zone ID: 12) to a heavy storm as part of a scripted event, enhancing the atmosphere for an in-game event.
+
+```typescript
+const ElwynnForestZoneId = 12;
+const HeavyStormIntensity = 3;
+
+enum WeatherType {
+    WEATHER_TYPE_FINE = 0,
+    WEATHER_TYPE_RAIN = 1,
+    WEATHER_TYPE_SNOW = 2,
+    WEATHER_TYPE_STORM = 3,
+    WEATHER_TYPE_THUNDERS = 86,
+    WEATHER_TYPE_BLACKRAIN = 90
+}
+
+const onEventTrigger: custom_events = (event: number): void => {
+    const EMapInstance = GetEMapInstance(); // Assuming existing function to get EMap instance
+
+    EMapInstance.SetWeather(ElwynnForestZoneId, WeatherType.WEATHER_TYPE_STORM, HeavyStormIntensity);
+    print("Heavy storm has been set in Elwynn Forest.");
+}
+
+RegisterEvent(EventIds.CUSTOM_EVENT_TRIGGER, (...args) => onEventTrigger(...args));
+```
+
+In the above example:
+- `GetEMapInstance()` is a hypothetical function used to obtain an instance of the `EMap` class where the `SetWeather` method is defined.
+- `EventIds.CUSTOM_EVENT_TRIGGER` and `custom_events` are placeholders for an event ID and callback type respectively, assuming your mod or script infrastructure supports custom event triggers.
+
+This script can be tailored and expanded to create dynamic weather conditions across multiple zones, enhancing the gameplay experience based on storylines, events, or other criteria.
+

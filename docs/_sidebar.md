@@ -13,8 +13,12 @@
         - [Item](./classes/Item.md)
         - [Object](./classes/EObject.md)
         - [Player](./classes/Player.md)
+        - [Quest](./classes/Quest.md)
+        - [Spell](./classes/Spell.md)
         - [Unit](./classes/Unit.md)
+        - [Vehicle](./classes/Vehicle.md)
         - [WorldObject](./classes/WorldObject.md)
+        - [WorldPacket](./classes/WorldPacket.md)
     - Events        
     - Enums
     - Examples

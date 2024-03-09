@@ -9444,3 +9444,42 @@ In this example:
 
 This example demonstrates how to create a custom vendor NPC that conditionally sends the vendor window based on the player's reputation, while also providing additional gossip options for interaction.
 
+## SendMovieStart
+Starts a movie for the player based on the MovieId provided. Movies are pre-recorded in-game cinematics that can be used to enhance storytelling or provide visual information to the player.
+
+### Parameters
+* MovieId: number - The ID of the movie to start. You can find a list of available movie IDs in the `MovieIds` enum.
+
+### Example Usage
+This example demonstrates how to start a movie for a player when they reach a certain level and have completed a specific quest. The movie will only play once per character.
+
+```typescript
+const REQUIRED_LEVEL = 60;
+const QUEST_ENTRY = 1234;
+const MOVIE_ID = MovieIds.MOVIE_ID_ARTHAS_TURN;
+
+const onLevelChanged: player_event_on_level_change = (event: number, player: Player, oldLevel: number): void => {
+    if (oldLevel < REQUIRED_LEVEL && player.GetLevel() >= REQUIRED_LEVEL) {
+        if (player.HasQuest(QUEST_ENTRY) && player.GetQuestStatus(QUEST_ENTRY) === QuestStatus.QUEST_STATUS_COMPLETE) {
+            const hasSeenMovie = player.GetData<boolean>("HasSeenArthasMovie");
+            if (!hasSeenMovie) {
+                player.SendMovieStart(MOVIE_ID);
+                player.SetData("HasSeenArthasMovie", true);
+            }
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LEVEL_CHANGE, (...args) => onLevelChanged(...args));
+```
+
+In this example:
+1. We define constants for the required level, quest entry, and movie ID.
+2. We register a player event listener for the `PLAYER_EVENT_ON_LEVEL_CHANGE` event.
+3. When the player's level changes, we check if their new level is greater than or equal to the required level and if their old level was less than the required level.
+4. We then check if the player has completed the specified quest using `HasQuest()` and `GetQuestStatus()`.
+5. If the player meets the level and quest requirements, we check if they have already seen the movie by retrieving a custom data value using `GetData<boolean>("HasSeenArthasMovie")`.
+6. If the player hasn't seen the movie yet, we start the movie using `SendMovieStart(MOVIE_ID)` and set the custom data value to `true` using `SetData("HasSeenArthasMovie", true)` to indicate that they have now seen the movie.
+
+This ensures that the movie only plays once per character when they reach the required level and have completed the specified quest.
+

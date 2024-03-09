@@ -11,6 +11,7 @@
         - [Group](./classes/Group.md)
         - [Player](./classes/Player.md)
         - [Unit](./classes/Unit.md)
+        - [WorldObject](./classes/WorldObject.md)
     - Events        
     - Enums
     - Examples

@@ -437,3 +437,413 @@ In this example, `ReadUShort` is used twice consecutively to read two 16-bit int
 
 The use of `ReadUShort` is essential in custom packet handling, enabling mod developers to interact with complex data sent between the client and server. This method provides a way to accurately parse and utilize packet data within the AzerothCore framework for creating engaging and dynamic game experiences.
 
+## SetOpcode
+
+This method assigns a specific opcode to the `WorldPacket`. Opcodes are essentially identifiers that specify the type of action or message being communicated between the client and the server in World of Warcraft. Accurate assignment of opcodes is crucial for the correct handling of packets.
+
+### Parameters
+* `opcode`: number - The opcode identifier to be set for the `WorldPacket`.
+
+### Example Usage:
+
+In this example, we're creating a simple callback that is triggered when a player logs in. We send a custom welcome message packet to the player. To do so, we create a new `WorldPacket` and set its opcode to a hypothetical `SMSG_WELCOME_MESSAGE` (a made-up opcode for demonstration purposes), then proceed to write the message into the packet and finally send it to the player.
+
+Assuming `SMSG_WELCOME_MESSAGE` has an opcode value of `12345`, and a fictional `SendPacket` function that sends the packet to the player.
+
+```typescript
+const WELCOME_OPCODE = 12345; // Hypothetical opcode for a welcome message
+const WELCOME_MESSAGE = "Welcome to our custom World of Warcraft server!";
+
+const onPlayerLogin: player_event_on_login = (event: number, player: Player): void => {
+    // Create a new WorldPacket object
+    let packet = new WorldPacket();
+
+    // Set the packet's opcode to our custom welcome message opcode
+    packet.SetOpcode(WELCOME_OPCODE);
+    
+    // (Hypothetical) Writing the welcome message into the packet
+    // This part largely depends on how the server expects the data to be formatted
+    // packet.WriteString(WELCOME_MESSAGE);
+
+    // (Hypothetical) Function to send the packet to the player
+    // This is also server-specific and might require the player's GUID or similar identifier
+    // SendPacket(player, packet);
+
+    // Log to server console
+    console.log("Sent welcome message to player: " + player.GetName());
+}
+
+// Register the login event callback
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => onPlayerLogin(...args));
+```
+Note: The usage of `WriteString` and `SendPacket` functions in this example are hypothetical and serve to illustrate the concept. Actual implementations may vary based on the server's packet handling and API provided by AzerothCore and mod-eluna.
+
+# WriteByte
+
+This method appends a signed 8-bit integer value to the `WorldPacket`. This is essential when constructing custom packets to communicate various types of information within the AzerothCore server framework, especially when dealing with mod-eluna scripts that modify or extend default game functionality. The `WriteByte` method is critical in ensuring data is correctly packaged in the protocol's expected format.
+
+### Parameters
+- `value`: number - The signed 8-bit integer value to append to the WorldPacket.
+
+### Example Usage:
+In this example, we're sending a custom packet to the player to trigger a unique UI element or game behavior not covered by the default Eluna API. Assume in this fictional scenario, the custom packet with an opcode of `123` is handled client-side to show a special UI component that is not part of the typical game interface.
+
+```typescript
+// Opcode for our custom UI display packet
+const CUSTOM_UI_DISPLAY_OPCODE = 123;
+// The specific value that triggers our unique UI behavior
+const UNIQUE_UI_TRIGGER = -57;
+
+// Function to create the packet and send it to the player
+function sendUniqueUIDisplay(player: Player): void {
+    let packet: WorldPacket = new WorldPacket(CUSTOM_UI_DISPLAY_OPCODE, 1); // 1 byte for our signed integer
+    packet.WriteByte(UNIQUE_UI_TRIGGER); // Appends our trigger value to the packet
+
+    player.SendPacket(packet); // Send the packet to the player
+}
+
+// Example on how to use sendUniqueUIDisplay
+// This could be called from some event, like when a player enters a specific area or triggers a custom event
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_ZONE_CHANGE, (player: Player) => {
+    // Assuming some condition is met that requires showing the unique UI
+    sendUniqueUIDisplay(player);
+});
+```
+This script utilizes the `WriteByte` method to append a signed 8-bit integer to a custom packet. It demonstrates creating a packet, appending data, and sending it to a player. Custom packets like this can be used to extend gameplay in ways not initially provided by the AzerothCore platform, showing the flexibility of mod-eluna scripts when used creatively.
+
+## WriteDouble
+
+Writes a 64-bit floating-point value to the [WorldPacket]. This method is useful when you need to transmit numerical data that requires high precision, such as coordinates or mathematical calculations, over the network.
+
+### Parameters
+* `value`: number - A 64-bit floating-point number to write to the packet.
+
+### Example Usage:
+Consider an example where you need to send a precise location of an event happening in the game world, such as the exact position where a special item should appear. 
+
+```typescript
+const EVENT_ITEM_SPAWN_ID = 40000; // Example item ID for a special event item
+const EVENT_SPAWN_LOCATION_X = 1234.5678; // Precise X coordinate for the spawn location
+const EVENT_SPAWN_LOCATION_Y = 9101.1121; // Precise Y coordinate for the spawn location
+const EVENT_SPAWN_LOCATION_Z = 3141.5926; // Precise Z coordinate for the spawn location
+
+/**
+ * A simple script to create a world event packet that defines where the special item should spawn.
+ * @param eventID Unique identifier for the custom event
+ */
+function createSpecialEventSpawnPacket(eventID: number): WorldPacket {
+    let packet = new WorldPacket(); // Assume WorldPacket is a constructible entity for example purposes
+
+    packet.WriteUInt32(eventID); // Write the event ID as an unsigned int
+    packet.WriteDouble(EVENT_SPAWN_LOCATION_X); // Write the X coordinate as a double
+    packet.WriteDouble(EVENT_SPAWN_LOCATION_Y); // Write the Y coordinate as a double
+    packet.WriteDouble(EVENT_SPAWN_LOCATION_Z); // Write the Z coordinate as a double
+
+    return packet;
+}
+
+/**
+ * A demonstration of how you might register and handle a custom event that makes use of the packet.
+ */
+function onSpecialEvent(): void {
+    let spawnPacket = createSpecialEventSpawnPacket(EVENT_ITEM_SPAWN_ID);
+    // SendPacket() is a hypothetical function demonstrating packet sending
+    SendPacket(spawnPacket); 
+}
+
+// Hypothetical event registration, assuming an event system that can handle custom-defined events
+RegisterCustomEvent("SpecialItemSpawnEvent", () => onSpecialEvent());
+```
+
+In this example, `createSpecialEventSpawnPacket` is a function that prepares a `WorldPacket` for broadcasting the spawn location of a special item during a world event. The location's precision is crucial for gameplay, hence the use of `WriteDouble` to ensure the coordinates are transmitted accurately. 
+
+This demonstrations an efficient use of the `WriteDouble` method, as part of an event that enhances the game world's dynamism and player engagement by precisely controlling the environment.
+
+## WriteFloat
+
+This method is utilized to write a 32-bit floating-point value to a [WorldPacket](./worldpacket.md), facilitating the communication of numeric data particularly useful for transmitting movement data, attributes, or any scenario where precision decimal values are required in packet transmission within the AzerothCore environment.
+
+### Parameters 
+* value: number - The 32-bit floating-point value to be written into the [WorldPacket].
+
+### Example Usage:
+In this example, we demonstrate how to create a custom movement packet for a player. This could be part of a larger module designed to manipulate player movements or to apply custom effects that require precise location adjustments. 
+
+```typescript
+import { PlayerEvents, WorldPacket, Opcode } from 'azerothcore';
+
+const onPlayerJump: player_event_on_jump = (player: Player): void => {
+    // Creating a new WorldPacket with an opcode for movement (This is a made-up opcode for demonstration)
+    const movementPacket = new WorldPacket(Opcode.SMSG_PLAYER_CUSTOM_MOVEMENT);
+
+    // Example coordinates
+    const jumpHeight = 1.5; // Arbitrary jump height increase
+
+    // WriteFloat can be used to encode precise movement details
+    // Here, we're assuming a fictional method to encode the player's current x, y, z coordinates
+    // and append a jump height to influence in-game behavior
+    movementPacket.WriteFloat(player.GetPositionX());
+    movementPacket.WriteFloat(player.GetPositionY());
+    movementPacket.WriteFloat(player.GetPositionZ() + jumpHeight);
+
+    // Sending the customized packet back to the player, applying the effect
+    player.SendDirectMessage(movementPacket);
+}
+
+// Register the event listener for player jump actions
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_JUMP, (...args) => onPlayerJump(...args));
+```
+This script intercepts the player's jump action, creating a custom `WorldPacket` that alters the player's movement by artificially increasing the jump height. It demonstrates the use of `WriteFloat` to encode this change within the packet before it's dispatched back to the player, showcasing the versatility and precision of floating-point data in packet manipulation.
+
+## WriteGUID
+This method allows for writing an unsigned 64-bit integer value to a `WorldPacket`. This is particularly useful for network communication where you might need to send GUIDs (Globally Unique Identifiers) of entities or objects across the network. 
+
+### Parameters <hr />
+* value: number - The unsigned 64-bit integer value to write into the WorldPacket.
+
+### Example Usage:  
+In this example, we send a packet to update a player's pet GUID. This might be part of a larger function where a player gets a new pet, and the server needs to notify the client about the change.  
+
+```typescript
+// Assuming there's a function to update player's pet, which requires sending the new pet's GUID to the player's client.
+function updatePlayerPet(player: Player, petGUID: number): void {
+    // Create a new WorldPacket. Assuming OPCODE_UPDATE_PET_GUID exists and is correct for this hypothetical scenario.
+    let packet = new WorldPacket(OPCODE_UPDATE_PET_GUID); 
+
+    // Write the pet's GUID into the packet.
+    packet.WriteGUID(petGUID); 
+
+    // Send the packet to the player.
+    player.SendPacket(packet);
+}
+
+// Example usage within an event when a player acquires a new pet.
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_NEW_PET, (player: Player, petGUID: number) => {
+    updatePlayerPet(player, petGUID);
+});
+```
+In this scenario, it's assumed that `OPCODE_UPDATE_PET_GUID` is an existing operation code in the system that handles updating a player's pet GUID. The `WorldPacket` class is used to package the data (in this case, the new pet's GUID), which is then sent to the client using the player's `SendPacket` method. This is a crucial part of handling server-client communication in an MMO framework like AzerothCore with mod-Eluna.
+
+Remember to always consider the underlying data structure and requirements of the packets you are working with. The GUID should fit within an unsigned 64-bit integer range, and appropriate checks should be made to ensure data integrity and security.
+
+## WriteLong
+Writes a signed 32-bit integer (`int32`) value to the `WorldPacket`. This method is primarily used in packet creation, where you need to append various data types to your packet before sending it over the network. The `WorldPacket` class is a fundamental part of message handling and network communication within the AzerothCore framework.
+
+### Parameters <hr />
+`value`: number - The 32-bit signed integer to append to the packet.
+
+### Example Usage:  
+This example demonstrates how to create a custom packet that sends a simple message containing a numeric value to the player. This hypothetical packet could inform the client about a specific state change that involves an integer value, such as a countdown timer, a score, or currency adjustment.
+  
+```typescript
+// Example: Sending a custom packet with a countdown timer value
+const MY_CUSTOM_OPCODE: number = 123; // Hypothetical custom opcode
+const COUNTDOWN_VALUE: number = 10; // Example countdown value
+
+const SendCountdownPacket: player_event_on_login = (event: number, player: Player): void => {
+    // Create a new WorldPacket object with our custom opcode
+    let packet = new WorldPacket(MY_CUSTOM_OPCODE);
+  
+    // Write our countdown value to the packet
+    packet.WriteLong(COUNTDOWN_VALUE);
+  
+    // Send the packet to the player
+    player.SendPacket(packet);
+}
+
+// Register our login event to send the packet when a player logs in
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => SendCountdownPacket(...args));
+```
+
+In this script, we create a new `WorldPacket` with a hypothetical opcode `123` and use the `WriteLong` method to append a numeric value (`COUNTDOWN_VALUE`) to it. Finally, we send this packet to the player upon login by registering the script to the `PLAYER_EVENT_ON_LOGIN` event. This is a simple example to demonstrate packet creation and handling; in a real-world scenario, opcodes and implementations may vary.
+
+# WriteShort
+
+This method is used to write a signed 16-bit integer (short) into a `WorldPacket`. In World of Warcraft's client-server communication, packets are used to send and receive data. Using `WriteShort`, developers can ensure that the data being sent conforms to the expected 16-bit signed integer format, crucial for various gameplay features.
+
+### Parameters
+- **value**: number - The 16-bit signed integer you want to write into the packet.
+
+### Example Usage
+
+Below is an example demonstrating how to use the `WriteShort` method to modify a `WorldPacket` by writing a player's health difference after taking damage. This could be part of a larger system where custom spell effects or damage calculations are implemented.
+
+```typescript
+const SPELL_DAMAGE_EVENT: player_event_on_spell_hit = (event: number, caster: Player, target: Unit, spell: Spell) => {
+    const spellDamage = 120; // Example spell damage value
+    const targetHealthBefore = target.GetHealth();
+    target.DealDamage(spellDamage);
+    const targetHealthAfter = target.GetHealth();
+    const healthDifference = targetHealthBefore - targetHealthAfter;
+
+    // Create a new WorldPacket
+    let damagePacket = new WorldPacket();
+    
+    // Assuming -32768 <= healthDifference <= 32767 since WriteShort handles signed 16-bit
+    damagePacket.WriteShort(healthDifference);
+
+    // Further packet preparation and sending logic goes here
+    // For demonstration purposes only
+    console.log(`Damage packet prepared with health difference: ${healthDifference}`);
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_SPELL_HIT, (...args) => SPELL_DAMAGE_EVENT(...args));
+```
+
+In this example, when a player hits a target with a spell, the system calculates the damage, modifies the target's health accordingly, and captures the health change. This health difference is then written into a `WorldPacket` using `WriteShort`. This packet could then be sent to the client or used in further server-side logic to, for example, display custom damage numbers, trigger specific effects based on the damage done, or log the event for analytics purposes. This demonstrates the creation and initial manipulation of packets, which is foundational for advanced gameplay mechanics and custom interactions in mods for Azerothcore utilizing Eluna.
+
+## WriteString
+This method is used to write a string to a [WorldPacket], which is a core component for handling data packets in AzerothCore's network communication. [WorldPacket](https://www.azerothcore.org/) is essentially a buffer that contains data to be sent between the server and the client. The `WriteString` function allows for dynamically adding text data to the packet, adhering to the protocol's formatting requirements.
+
+### Parameters
+- `value`: string - The string to be written into the [WorldPacket].
+
+### Example Usage:
+The following script exemplifies how to create a custom server message that can be sent to a player. This message contains dynamic content, in this case, a player's name, that is fetched at runtime and inserted into the WorldPacket before being sent.
+
+```typescript
+// Import necessary modules from Eluna/AzerothCore scripting environment
+import { WorldPacket, Player } from "azerothcore-eluna";
+
+// Custom function to send a welcome message to a player
+function sendWelcomeMessage(player: Player): void {
+    // Define Server opcode for downstream messages (example opcode, actual opcodes differ)
+    const SERVER_MESSAGE_OPCODE = 123;
+
+    // Create a new WorldPacket with the defined opcode
+    let packet = new WorldPacket(SERVER_MESSAGE_OPCODE);
+  
+    // Constructing the welcome message with dynamic player's name
+    const welcomeMessage = `Welcome to Azeroth, ${player.GetName()}! We're glad you're here.`;
+  
+    // Writing constructed message string to packet
+    packet.WriteString(welcomeMessage);
+
+    // Sending packet directly to the player
+    player.SendPacket(packet);
+
+    console.log(`Sent welcome message to ${player.GetName()}`);
+}
+
+// Example of registering the function to be called upon player login
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (player) => {
+    sendWelcomeMessage(player);
+});
+```
+This script dynamically constructs a welcome message including the player's name by fetching it at runtime with `player.GetName()`, writes the message into the `WorldPacket` using the `WriteString` method, and finally sends this packet to the player, effectively displaying the message to them in-game. This method of packet handling is crucial for custom server-client interactions within mods built for AzerothCore using mod-eluna.
+
+## WriteUByte
+Writes an unsigned 8-bit integer value to the [WorldPacket]. This is essential for constructing packets for custom commands or responses in a mod.
+
+### Parameters  
+- `value`: number - The value to write as an unsigned 8-bit integer. Must be between 0 and 255.
+
+### Example Usage
+In this example, we create a simple custom packet to change the player's speed. This example showcases how to use the `WriteUByte` method to add an identifier byte and then how to use other hypothetical methods like `WriteFloat` to add a floating-point value for the speed.
+
+```typescript
+const SPEED_CHANGE_IDENTIFIER = 0xA1; // Custom identifier for our speed change packet
+const NEW_SPEED = 1.5; // The new speed value
+
+const onChangePlayerSpeed: player_event = (player: Player): void => {
+    let packet = new WorldPacket(); // Assuming WorldPacket is a creatable instance here
+
+    packet.WriteUByte(SPEED_CHANGE_IDENTIFIER); // Writes our custom packet identifier
+    packet.WriteFloat(NEW_SPEED); // Hypothetical method to write a float value for the new speed
+
+    player.SendPacket(packet); // Hypothetical method to send the packet to the player, affecting the player's speed
+
+    console.log("Speed change packet sent to player."); // Logging for debug purposes
+}
+
+// Register our custom event (hypothetical) that calls our function to change player speed
+// Assuming there's a mechanism in place to trigger this event
+RegisterPlayerEvent(PlayerEvents.CUSTOM_EVENT_SPEED_CHANGE, (...args) => onChangePlayerSpeed(...args));
+```
+
+In this script, we use a fabricated scenario where a custom packet identified by `SPEED_CHANGE_IDENTIFIER` is sent to the player, requesting their client to change speed to a specified value. The `WriteUByte` method is crucial for specifying the packet type, allowing the client to correctly interpret and process the following data, which in this case is the new speed value written by a hypothetical `WriteFloat` method. 
+
+This example aims to illustrate the use of `WriteUByte` in a packet construction context, showing how such low-level operations are foundational in custom mod development for AzerothCore using the Eluna engine.
+
+
+## WriteULong
+Writes an unsigned 32-bit integer value to the WorldPacket, which is used to send data between the server and the client. This allows developers to customize data packets for various features and functionality within the Azerothcore mod.
+
+### Parameters
+- **value**: `number` - The unsigned 32-bit integer value to write into the WorldPacket.
+
+### Example Usage
+In this example, we will create a simple feature that allows sending a custom server message to a player indicating their current health percentage rounded to the nearest whole number. This showcases the use of `WriteULong` to send packet data.
+
+First, we define the packet structure and the message opcode, assuming `CUSTOM_OPCODE` is predefined in your mod environment:
+
+```typescript
+const CUSTOM_OPCODE = 123; // Example opcode, replace with actual opcode
+```
+
+Next, we create a function that constructs and sends the custom packet to the player:
+
+```typescript
+function SendHealthStatus(player: Player): void {
+    const playerHealth = player.GetHealthPct(); // Gets the player's current health percentage
+    const healthMessage = `Your current health is around ${Math.round(playerHealth)}%. Stay safe!`;
+
+    const packet = new WorldPacket(); // Create a new WorldPacket instance
+    packet.WriteULong(CUSTOM_OPCODE); // Write the custom message opcode
+
+    /*
+        Assuming that the custom opcode requires the message length followed by the message itself,
+        and considering an additional hypothetical WriteString method for simplicity.
+    */
+    packet.WriteULong(healthMessage.length); // Write the length of the message
+    packet.WriteString(healthMessage); // Hypothetically write the message string
+
+    player.SendPacket(packet); // Send the custom packet to the player
+}
+
+// Registering an event for demonstration, such as player login
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (event: number, player: Player) => {
+    SendHealthStatus(player); // Send the health status message upon player login
+});
+```
+In the above code, `WorldPacket` is used to create a custom data packet that includes a message opcode and the message contents tailored for the player. The `WriteULong` method is specifically used to write both the message opcode and its length as unsigned 32-bit integers, following a simplified and hypothetical structure of how packets might be constructed in a mod for Azerothcore.
+
+This example illustrates a potential use case for `WriteULong`, enabling mod developers to craft custom interactions and communications within the game. Remember, the actual implementation and requirements may vary based on the specifics of your mod and Azerothcore's current capabilities.
+
+# WriteUShort
+
+This method allows for writing an unsigned 16-bit integer (also known as ushort) value to a `[WorldPacket]`. Coding for network communication or data packet manipulation often requires handling data in specific, compact formats. This method is particularly used when dealing with packet creation or editing in the context of server-client data exchanges in Azerothcore's mod-eluna scripting.
+
+### Parameters
+
+- `value`: number - The unsigned 16-bit integer to write to the packet.
+
+### Example Usage:
+
+Below is a scripted example demonstrating how to use `WriteUShort` to create a custom packet that sends a specific two-byte data structure—perhaps an action code or a smaller data set like an item's quantity. This custom packet could be part of a larger system, such as updating the UI or triggering specific client-side effects not typically exposed through the standard Eluna API.
+
+```typescript
+function SendCustomPacket(player: Player, actionCode: number): void {
+    const OPCODE: number = 123; // Example opcode for the custom packet
+    let packet = new WorldPacket(); // Assuming WorldPacket constructor is accessible and not simplified for illustration
+    
+    packet.SetOpcode(OPCODE); // Method to set the packet's operation code - not defined but assumed for demonstration
+    packet.WriteUShort(actionCode); // Writing our hypothetical action code as an unsigned short to the packet
+    
+    // Additional packet construction here...
+    // For instance, adding a string or another integer based on the packet's intended structure and use case
+    
+    player.SendPacket(packet); // Sending the custom packet to the player
+    console.log(`Sent custom packet with action code ${actionCode} to ${player.GetName()}.`);
+}
+
+// Registering a hypothetical player event to trigger our custom packet as a demonstration
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (player: Player) => {
+    const WELCOME_ACTION_CODE: number = 256; // Example action code for welcoming the player
+    
+    SendCustomPacket(player, WELCOME_ACTION_CODE);
+});
+```
+
+In this hypothetical example, assume that sending this custom packet triggers a specific behavior on the client-side, represented by the `actionCode`. The `SendCustomPacket` function encapsulates the creation and dispatch of the packet, leveraging the `WriteUShort` method to insert the action code into the packet's payload. The script showcases a potential use case within the mod-eluna framework for enhancing interactive gameplay elements or extending the client-server communication beyond the available API functions in Azerothcore.
+

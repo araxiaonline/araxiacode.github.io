@@ -38,7 +38,7 @@ function TriggerCustomEventForPlayer(player: Player) {
 ```
 This snippet demonstrates how to use `GetAreaId` to trigger a custom event when a player enters a specific area. By checking the area ID where the player moves, developers can script immersive experiences tailored to different locations in the game.
 
-# GetDifficulty
+## GetDifficulty
 This method retrieves the difficulty level of the current map where the EMap instance is located. It's important to note that if the game expansion is before The Burning Crusade (pre-TBC), this method will always return `0`, implying that difficulty levels introduced in later expansions are not applicable.
 
 ### Returns
@@ -352,7 +352,7 @@ RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_AREA_CHANGE, (...args) => onPla
 
 This example attempts to retrieve a specific NPC on the map using its GUID when a player enters a new area. If the NPC is found and is currently spawned on the map, it will say designated text, offering countless opportunities for dynamic player interactions in the game world.
 
-# IsArena
+## IsArena
 
 Check if the current map is an Arena BattleGround. It can be useful to determine the type of battleground environment players are in to apply specific logic for arenas.
 
@@ -419,7 +419,7 @@ This example demonstrates how you can utilize the `IsBattleground` method to che
 
 The `IsBattleground` method is useful in scenarios where specific game behavior, events, or conditions must be applied or checked only in non-arena battleground maps, providing a straightforward way of distinguishing between different types of PvP environments in the game.
 
-# IsDungeon
+## IsDungeon
 
 Determines if the current map is a dungeon.
 

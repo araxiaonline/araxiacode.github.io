@@ -1,7 +1,10 @@
 - [About](/)
 - Eluna Typescript
-    - Getting Started
-    - Configuration    
+    - [Getting Started](./ets/GettingStarted.md)
+    - [Configuration](./ets/Configuration.md)
+    - [Building Modules](./ets/Modules.md)
+    - [VSCode Integration](./ets/VSCodeIntegration.md)
+    - [Advanced Topics](./ets/AdvancedTopics.md)
     - Eluna Classes
         - [Aura](./classes/Aura.md)
         - [BattleGround](./classes/BattleGround.md)

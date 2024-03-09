@@ -569,3 +569,109 @@ In this example:
 
 This example showcases how to utilize the `GetTargetDest` method to retrieve the spell's target destination coordinates and perform actions based on that information, such as spawning a creature or granting a buff to the caster depending on the landing position.
 
+## IsAutoRepeat
+Returns a boolean value indicating whether the spell is automatically repeating or not.
+
+### Parameters
+None
+
+### Returns
+boolean - `true` if the spell is automatically repeating, `false` otherwise.
+
+### Example Usage
+This example demonstrates how to check if a spell is automatically repeating and adjust the spell's behavior accordingly.
+
+```typescript
+const SPELL_SHOOT = 3018;
+const SPELL_AUTO_SHOT = 75;
+
+const onSpellCast: player_event_on_spell_cast = (event: number, player: Player, spell: Spell, skipCheck: boolean) => {
+    if (spell.GetEntry() === SPELL_SHOOT || spell.GetEntry() === SPELL_AUTO_SHOT) {
+        if (spell.IsAutoRepeat()) {
+            // Spell is automatically repeating
+            const autoRepeatCount = player.GetData("autoRepeatCount") || 0;
+            player.SetData("autoRepeatCount", autoRepeatCount + 1);
+
+            if (autoRepeatCount >= 5) {
+                // Cancel the auto-repeat after 5 repetitions
+                player.CastSpell(player, SPELL_SHOOT, true);
+                player.SetData("autoRepeatCount", 0);
+            }
+        } else {
+            // Spell is not automatically repeating
+            player.SendBroadcastMessage("You have manually cast the spell.");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_SPELL_CAST, (...args) => onSpellCast(...args));
+```
+
+In this example:
+1. We define constants for the spell IDs of "Shoot" and "Auto Shot".
+2. In the `PLAYER_EVENT_ON_SPELL_CAST` event handler, we check if the cast spell is either "Shoot" or "Auto Shot".
+3. If the spell is automatically repeating (checked using `spell.IsAutoRepeat()`), we increment a counter stored in the player's data to keep track of the number of repetitions.
+4. If the auto-repeat count reaches 5, we cancel the auto-repeat by manually casting the "Shoot" spell on the player and reset the auto-repeat count.
+5. If the spell is not automatically repeating, we send a broadcast message to the player indicating that they have manually cast the spell.
+
+This example showcases how the `IsAutoRepeat()` method can be used to determine if a spell is automatically repeating and make decisions based on that information, such as canceling the auto-repeat after a certain number of repetitions or performing specific actions for manually cast spells.
+
+## SetAutoRepeat
+Sets the [Spell] to automatically repeat.
+
+### Parameters
+* repeat: boolean - If 'true', the spell will automatically repeat, if 'false', the spell will not automatically repeat.
+
+### Example Usage
+This script demonstrates how to create a custom spell that will automatically repeat until the player cancels it or runs out of mana.
+
+```typescript
+// Create a custom spell ID
+const CUSTOM_SPELL_ID = 123456;
+
+// Create a spell script for the custom spell
+const SpellScript = {
+    canCast: function(caster: Unit, target: Unit, spell: Spell): SpellCastResult {
+        // Only allow the spell to be cast by players
+        if (!caster.IsPlayer()) {
+            return SpellCastResult.SPELL_FAILED_DONT_REPORT;
+        }
+        return SpellCastResult.SPELL_CAST_OK;
+    },
+
+    onCast: function(caster: Unit, target: Unit, spell: Spell): void {
+        // Enable auto-repeat for the spell
+        spell.SetAutoRepeat(true);
+    },
+
+    onHit: function(caster: Unit, target: Unit, spell: Spell): void {
+        // Deal damage to the target
+        caster.DealDamage(target, 100, true);
+    },
+
+    onAfterCast: function(caster: Unit, target: Unit, spell: Spell): void {
+        // Check if the caster has enough mana to cast the spell again
+        const player = caster.ToPlayer();
+        if (!player || player.GetPower(Powers.POWER_MANA) < spell.GetPowerCost()) {
+            // Cancel the auto-repeat if the player doesn't have enough mana
+            spell.SetAutoRepeat(false);
+        }
+    }
+};
+
+// Register the spell script
+RegisterSpellScript(CUSTOM_SPELL_ID, SpellScript);
+```
+
+In this example, we create a custom spell with the ID `123456`. We then register a spell script for this custom spell.
+
+In the `canCast` function, we check if the caster is a player. If not, we return `SPELL_FAILED_DONT_REPORT` to prevent the spell from being cast.
+
+In the `onCast` function, we enable auto-repeat for the spell using `spell.SetAutoRepeat(true)`. This will cause the spell to automatically repeat until it is canceled or the player runs out of mana.
+
+In the `onHit` function, we deal damage to the target using `caster.DealDamage(target, 100, true)`. This will deal 100 damage to the target each time the spell hits.
+
+Finally, in the `onAfterCast` function, we check if the player has enough mana to cast the spell again. We do this by getting the player object using `caster.ToPlayer()` and then checking their current mana using `player.GetPower(Powers.POWER_MANA)`. If the player doesn't have enough mana to cast the spell again, we cancel the auto-repeat using `spell.SetAutoRepeat(false)`.
+
+With this script, players will be able to cast the custom spell, which will automatically repeat until they cancel it or run out of mana. Each time the spell hits a target, it will deal 100 damage.
+

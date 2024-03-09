@@ -9517,3 +9517,2474 @@ In this example:
 
 This script provides the player with real-time feedback on their kills and offers a little extra recognition when they reach a milestone number of kills.
 
+## SendPacket
+Sends a [WorldPacket](./worldpacket.md) to the player's client. This method can be used to send various types of data and information to the player, such as system messages, spell visual effects, sound effects, and more.
+
+### Parameters
+* packet: [WorldPacket](./worldpacket.md) - The WorldPacket object to send to the player.
+* selfOnly?: boolean - If set to 'true', the packet will only be sent to the player. If set to 'false' or omitted, the packet will be sent to the player and their surrounding players within visible range.
+
+### Example Usage
+Sending a custom message to the player with a visual effect and sound:
+```typescript
+const VISUAL_EFFECT_ENTRY = 123;
+const SOUND_EFFECT_ENTRY = 456;
+
+const SendCustomMessage = (player: Player, message: string) => {
+    const packet = new WorldPacket(Opcodes.SMSG_MESSAGECHAT);
+    packet.WriteUInt8(ChatMsg.CHAT_MSG_SYSTEM);
+    packet.WriteUInt32(Language.LANG_UNIVERSAL);
+    packet.WriteUInt64(0);
+    packet.WriteUInt32(0);
+    packet.WriteString(message);
+    packet.WriteUInt8(0);
+    player.SendPacket(packet);
+
+    const visualPacket = new WorldPacket(Opcodes.SMSG_PLAY_SPELL_VISUAL);
+    visualPacket.WriteUInt64(player.GetGUID());
+    visualPacket.WriteUInt32(VISUAL_EFFECT_ENTRY);
+    player.SendPacket(visualPacket, true);
+
+    player.PlayDirectSound(SOUND_EFFECT_ENTRY);
+};
+
+const OnPlayerLogin: player_event_on_login = (event: number, player: Player) => {
+    SendCustomMessage(player, "Welcome to the server! Here's a special effect just for you.");
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => OnPlayerLogin(...args));
+```
+
+In this example, when a player logs in, the `SendCustomMessage` function is called. It creates a new `WorldPacket` with the `SMSG_MESSAGECHAT` opcode to send a system message to the player. The packet is populated with the necessary data, such as the message type, language, and the actual message content.
+
+After sending the system message, another `WorldPacket` is created with the `SMSG_PLAY_SPELL_VISUAL` opcode to play a visual effect on the player. The player's GUID and the visual effect entry ID are written to the packet. The `selfOnly` parameter is set to 'true' to ensure that the visual effect is only visible to the player and not to surrounding players.
+
+Finally, the `PlayDirectSound` method is called to play a sound effect for the player.
+
+This example demonstrates how the `SendPacket` method can be used in combination with other methods and opcodes to create immersive experiences for players by sending custom messages, visual effects, and sound effects.
+
+## SendQuestTemplate
+This method sends a quest offer window to the player for the specified quest. The quest details are taken from the `quest_template` table in the world database.
+
+### Parameters
+* questId: number - The ID of the quest to offer, as found in the `quest_template` table.
+* activateAccept?: boolean - Optional parameter. If set to true, the quest will be automatically accepted if the player is eligible. Defaults to false.
+
+### Example Usage
+This example shows how to offer a daily quest to a player when they login, and automatically accept it if they are eligible.
+
+```typescript
+const DAILY_QUEST_ID = 12345;
+
+function OnLogin(event: PlayerEvents, player: Player) {
+    // Check if the player is eligible for the daily quest
+    if (player.CanCompleteQuest(DAILY_QUEST_ID)) {
+        // Get the current server time
+        const now = new Date();
+        
+        // Check if the quest has already been completed today
+        const lastCompleted = player.GetQuestRewardStatus(DAILY_QUEST_ID);
+        if (!lastCompleted || (now.getTime() - lastCompleted.getTime()) >= 86400000) {
+            // Offer the quest and automatically accept it
+            player.SendQuestTemplate(DAILY_QUEST_ID, true);
+            
+            // Inform the player that the quest has been accepted
+            player.SendBroadcastMessage(`You have accepted the daily quest '${GetQuestTemplate(DAILY_QUEST_ID).LogTitle}'.`);
+        }
+    }
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, OnLogin);
+```
+
+In this example:
+1. We define a constant `DAILY_QUEST_ID` to store the ID of the daily quest we want to offer.
+2. We register a `PLAYER_EVENT_ON_LOGIN` event handler to run our logic when a player logs in.
+3. We check if the player is eligible to complete the quest using `CanCompleteQuest()`.
+4. If the player is eligible, we get the current server time using `new Date()`.
+5. We check if the player has already completed the quest today by comparing the last completion time (if any) to the current time. If the quest hasn't been completed or it's been more than 24 hours (86400000 ms) since the last completion, we proceed.
+6. We offer the quest to the player using `SendQuestTemplate()`, passing `true` as the second parameter to automatically accept the quest if the player is eligible.
+7. Finally, we send a message to the player informing them that they have accepted the daily quest, using `SendBroadcastMessage()` and the quest's `LogTitle` from the `quest_template` table.
+
+This example demonstrates how to use the `SendQuestTemplate()` method in a practical scenario, while also showcasing other related methods and techniques commonly used in quest scripting.
+
+## SendShowBank
+Sends a bank window to the player from a specified WorldObject. This is typically used to allow players to access their bank from NPCs, objects or other interactive game objects.
+
+### Parameters
+* sender: [WorldObject](./worldobject.md) - The WorldObject that is sending the bank window to the player.
+
+### Example Usage
+This example shows how to create an NPC that allows players to access their bank when interacting with it.
+
+```typescript
+const BANK_NPC_ENTRY = 1000;
+
+// Create a gossip hello hook for the bank NPC
+const BankNPCGossipHello: gossip_hello = (event: number, player: Player, object: WorldObject): boolean => {
+    // Add a gossip item to open the bank
+    player.GossipMenuAddItem(GossipIcon.Banker, "I would like to access my bank.", 0, 1);
+    
+    // Send the gossip menu to the player
+    player.GossipSendMenu(0, object.GetGUID());
+    
+    return true;
+};
+
+// Create a gossip select hook for the bank NPC
+const BankNPCGossipSelect: gossip_select = (event: number, player: Player, object: WorldObject, sender: number, action: number): boolean => {
+    // Check if the player selected the bank gossip option
+    if (action === 1) {
+        // Close the gossip menu
+        player.GossipComplete();
+        
+        // Send the bank window to the player
+        player.SendShowBank(object);
+    }
+    
+    return true;
+};
+
+// Register the gossip hooks for the bank NPC
+RegisterCreatureGossipEvent(BANK_NPC_ENTRY, GOSSIP_EVENT_ON_HELLO, (...args) => BankNPCGossipHello(...args));
+RegisterCreatureGossipEvent(BANK_NPC_ENTRY, GOSSIP_EVENT_ON_SELECT, (...args) => BankNPCGossipSelect(...args));
+```
+
+In this example, we create an NPC with the entry ID `BANK_NPC_ENTRY`. When a player interacts with this NPC, the `BankNPCGossipHello` function is called, which adds a gossip item to the menu allowing the player to access their bank.
+
+When the player selects the bank gossip option, the `BankNPCGossipSelect` function is called. It checks if the selected action corresponds to the bank option (action === 1) and if so, it closes the gossip menu using `player.GossipComplete()` and sends the bank window to the player using `player.SendShowBank(object)`, passing the NPC object as the sender.
+
+Finally, we register the gossip hooks for the bank NPC using `RegisterCreatureGossipEvent` for both the `GOSSIP_EVENT_ON_HELLO` and `GOSSIP_EVENT_ON_SELECT` events, associating them with their respective handler functions.
+
+With this script, players can interact with the designated bank NPC to conveniently access their bank storage without having to visit a physical bank location in the game world.
+
+## SendShowMailBox
+Shows the mailbox window to the player. If a guid is provided, the mailbox window will be opened with that specific mailbox.
+
+### Parameters
+* guid (optional): number - The GUID of the mailbox to open. If not provided, the nearest mailbox will be used.
+
+### Example Usage
+This example demonstrates how to open the mailbox window for a player when they interact with a specific gameobject. In this case, a custom mailbox with a specific GUID.
+
+```typescript
+const CUSTOM_MAILBOX_GUID = 12345; // Replace with the GUID of your custom mailbox gameobject
+
+const OnGossipHello: player_event_on_gossip_hello = (event: number, player: Player, object: GameObject) => {
+    if (object.GetDBTableGUIDLow() === CUSTOM_MAILBOX_GUID) {
+        // Show a custom gossip menu
+        player.GossipMenuAddItem(0, "Open Mailbox", 0, 1);
+        player.GossipSendMenu(0, object);
+    }
+};
+
+const OnGossipSelect: player_event_on_gossip_select = (event: number, player: Player, object: GameObject, sender: number, action: number) => {
+    if (object.GetDBTableGUIDLow() === CUSTOM_MAILBOX_GUID && action === 1) {
+        // Open the mailbox window with the specific GUID
+        player.SendShowMailBox(CUSTOM_MAILBOX_GUID);
+        player.GossipComplete();
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_GOSSIP_HELLO, (...args) => OnGossipHello(...args));
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_GOSSIP_SELECT, (...args) => OnGossipSelect(...args));
+```
+
+In this example:
+1. We define a constant `CUSTOM_MAILBOX_GUID` to store the GUID of our custom mailbox gameobject.
+2. In the `OnGossipHello` event, we check if the interacted object has the same GUID as our custom mailbox.
+   - If it matches, we add a gossip menu item "Open Mailbox" with an action ID of 1.
+   - We send the gossip menu to the player.
+3. In the `OnGossipSelect` event, we check if the selected object is our custom mailbox and if the action ID is 1.
+   - If the conditions are met, we call `player.SendShowMailBox(CUSTOM_MAILBOX_GUID)` to open the mailbox window with the specific GUID.
+   - We call `player.GossipComplete()` to close the gossip window.
+4. Finally, we register the `OnGossipHello` and `OnGossipSelect` events to handle the player interactions.
+
+This example showcases how to create a custom mailbox gameobject and open the mailbox window for the player when they interact with it using gossip menus.
+
+## SendSpiritResurrect
+This method will send a resurrect request to the player's spirit healer.  This is the same resurrect that a player can do from a spirit healer after dying.  This will not work if the player's body is still in the world.  The player must be at a graveyard as a ghost for this to function properly.
+
+### Parameters
+None
+
+### Example Usage:
+This script will allow a GM to cast a revive spell on a player's spirit to resurrect them as long as they are already at a graveyard in spirit form.
+
+```typescript
+const REVIVE_SPELL_ID = 99999;
+
+const SpellCast = (event: any, caster: Unit, spellTarget: Unit, spellId: number): void => {
+    if(spellId == REVIVE_SPELL_ID)
+    {
+        if(caster instanceof Player && spellTarget instanceof Player)
+        {
+            // Check if the player is casting the spell on theirself
+            if(caster.GetGUID() !== spellTarget.GetGUID()) 
+            {
+                caster.SendBroadcastMessage("You can only cast this spell on yourself.")
+                return;
+            }
+            
+            // Check if player is alive
+            if(spellTarget.IsAlive()) 
+            {
+                caster.SendBroadcastMessage("You can't resurrect yourself if you are still alive.");
+                return;
+            }
+            
+            // Check if player is in a graveyard
+            if(!spellTarget.IsInGraveyard()) 
+            {
+                caster.SendBroadcastMessage("You must be at a graveyard in your spirit form to resurrect.");
+                return;
+            }
+
+            spellTarget.SendSpiritResurrect();
+            spellTarget.SendBroadcastMessage("You have been resurrected by the power of the Light!");
+        }
+    }
+}
+
+RegisterServerEvent(ServerEvents.CREATURE_EVENT_ON_SPELL_CAST, (...args) => SpellCast(...args));
+```
+
+In this example, we have created a custom spell that will allow a player to resurrect their spirit at a graveyard.  First, we check if the player is casting the spell on theirself as this spell should not work on other players.  Next, we make sure the player is not alive, as you cannot resurrect yourself while alive.  We then check to make sure the player is at a graveyard in spirit form.  If all the conditions are met, we call the SendSpiritResurrect() method to send the resurrect request to the player.  Finally, we send a message to the player to let them know they have been resurrected.
+
+## SendTabardVendorActivate
+This method sends a tabard vendor window to the player from the specified WorldObject. It allows players to interact with a tabard vendor and purchase tabards.
+
+### Parameters
+* sender: [WorldObject](./worldobject.md) - The WorldObject that represents the tabard vendor.
+
+### Example Usage
+In this example, we create a custom NPC that acts as a tabard vendor. When the player interacts with the NPC, it sends the tabard vendor window to the player.
+
+```typescript
+const TABARD_VENDOR_ENTRY = 1234; // Custom NPC entry ID
+
+// Create a custom NPC
+const CreateTabardVendor = (): void => {
+    const vendorPosition = { x: 0, y: 0, z: 0, o: 0 }; // Set the desired position and orientation
+    const vendorMap = 0; // Set the desired map ID
+
+    const vendor = InstanceData.GetCreature(TABARD_VENDOR_ENTRY, vendorMap, vendorPosition);
+
+    if (!vendor) {
+        // Spawn the custom NPC if it doesn't exist
+        vendor = InstanceData.AddCreature(TABARD_VENDOR_ENTRY, vendorMap, vendorPosition);
+
+        if (vendor) {
+            // Set the NPC flags to make it a gossip NPC
+            vendor.SetFlag(UnitFlags.UNIT_NPC_FLAG_GOSSIP, 0);
+        }
+    }
+};
+
+// Called when the player talks to the tabard vendor NPC
+const OnTabardVendorHello: vehicle_event_on_hello = (event: number, player: Player, vendor: Creature): void => {
+    // Check if the NPC is the custom tabard vendor
+    if (vendor.GetEntry() === TABARD_VENDOR_ENTRY) {
+        // Send the tabard vendor window to the player
+        player.SendTabardVendorActivate(vendor);
+    }
+};
+
+// Register the events
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_SPAWN, (...args) => CreateTabardVendor(...args));
+RegisterCreatureEvent(CreatureEvents.CREATURE_EVENT_ON_GOSSIP_HELLO, (...args) => OnTabardVendorHello(...args));
+```
+
+In this script:
+1. We define a custom NPC entry ID (`TABARD_VENDOR_ENTRY`) for the tabard vendor.
+2. In the `CreateTabardVendor` function, we check if the custom NPC already exists. If it doesn't, we spawn the NPC at the desired position and map, and set the necessary NPC flags.
+3. We register the `CreatureEvents.CREATURE_EVENT_ON_SPAWN` event to call the `CreateTabardVendor` function when the server starts up.
+4. In the `OnTabardVendorHello` function, we check if the NPC that the player interacted with is the custom tabard vendor. If it is, we call the `SendTabardVendorActivate` method, passing the vendor object as the sender.
+5. We register the `CreatureEvents.CREATURE_EVENT_ON_GOSSIP_HELLO` event to call the `OnTabardVendorHello` function when the player interacts with the tabard vendor NPC.
+
+With this script, players can interact with the custom tabard vendor NPC, and the tabard vendor window will be sent to them, allowing them to purchase tabards.
+
+## SendTaxiMenu
+Sends a flightmaster window to the player from the specified creature. This allows the player to interact with the creature as if it were a flightmaster, opening up the taxi destination window.
+
+### Parameters
+* sender: [Creature](./creature.md) - The creature to send the taxi menu from, acting as a flightmaster
+
+### Example Usage:
+Create a custom flightmaster NPC that can send players to specific locations based on their level and reputation.
+```typescript
+const CUSTOM_FLIGHTMASTER_ENTRY = 1000000;
+const STORMWIND_TAXI_NODE = 2;
+const IRONFORGE_TAXI_NODE = 6;
+const GNOMEREGAN_TAXI_NODE = 27;
+
+const OnGossipHello: creature_event_on_gossip_hello = (event: number, creature: Creature, player: Player) => {
+    if (creature.GetEntry() === CUSTOM_FLIGHTMASTER_ENTRY) {
+        player.GossipMenuAddItem(0, "Fly to Stormwind", 1, 0);
+
+        if (player.GetLevel() >= 20 && player.GetReputationRank(54) >= 4) { // Gnomeregan Exiles - Friendly
+            player.GossipMenuAddItem(0, "Fly to Ironforge", 2, 0);
+        }
+
+        if (player.GetLevel() >= 30 && player.GetReputationRank(54) >= 6) { // Gnomeregan Exiles - Honored
+            player.GossipMenuAddItem(0, "Fly to Gnomeregan", 3, 0);
+        }
+
+        player.GossipSendMenu(1, creature.GetGUID());
+    }
+};
+
+const OnGossipSelect: creature_event_on_gossip_select = (event: number, creature: Creature, player: Player, sender: any, action: number) => {
+    if (creature.GetEntry() === CUSTOM_FLIGHTMASTER_ENTRY) {
+        player.GossipComplete();
+
+        switch (action) {
+            case 1:
+                player.SendTaxiMenu(creature);
+                player.ActivateTaxiPathTo(STORMWIND_TAXI_NODE);
+                break;
+            case 2:
+                player.SendTaxiMenu(creature);
+                player.ActivateTaxiPathTo(IRONFORGE_TAXI_NODE);
+                break;
+            case 3:
+                player.SendTaxiMenu(creature);
+                player.ActivateTaxiPathTo(GNOMEREGAN_TAXI_NODE);
+                break;
+        }
+    }
+};
+
+RegisterCreatureEvent(CUSTOM_FLIGHTMASTER_ENTRY, CreatureEvents.CREATURE_EVENT_ON_GOSSIP_HELLO, OnGossipHello);
+RegisterCreatureEvent(CUSTOM_FLIGHTMASTER_ENTRY, CreatureEvents.CREATURE_EVENT_ON_GOSSIP_SELECT, OnGossipSelect);
+```
+In this example, we create a custom flightmaster NPC that opens a gossip menu with different flight options based on the player's level and reputation with the Gnomeregan Exiles faction. When the player selects an option, the `SendTaxiMenu` method is called to open the flightmaster window, and then the player is sent to the corresponding taxi node using `ActivateTaxiPathTo`.
+
+## SendTrainerList
+This method sends a trainer window to the player from the specified creature. The trainer window allows the player to browse and learn new spells and abilities from the creature trainer.
+
+### Parameters
+* sender: [Creature](./creature.md) - The creature that will act as the trainer and send the trainer window to the player.
+
+### Example Usage
+In this example, when a player interacts with a creature (e.g., clicks on it), the script checks if the creature's entry matches a specific trainer entry. If it does, the creature sends the trainer window to the player, allowing them to browse and learn new spells and abilities.
+
+```typescript
+const TRAINER_ENTRY = 123; // Replace with the desired trainer entry ID
+
+const onGossipHello: player_event_on_gossip_hello = (event: number, player: Player, creature: Creature) => {
+    if (creature.GetEntry() === TRAINER_ENTRY) {
+        creature.SendTrainerList(player);
+        return;
+    }
+
+    // Other gossip handling logic for non-trainer creatures
+    // ...
+
+    player.GossipComplete();
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_GOSSIP_HELLO, (...args) => onGossipHello(...args));
+```
+
+In this script:
+1. We define a constant `TRAINER_ENTRY` to store the entry ID of the desired trainer creature.
+2. We register a player event handler for the `PLAYER_EVENT_ON_GOSSIP_HELLO` event using `RegisterPlayerEvent`.
+3. Inside the event handler, we check if the interacted creature's entry matches the `TRAINER_ENTRY`.
+4. If it matches, we call `creature.SendTrainerList(player)` to send the trainer window to the player.
+5. If the creature is not a trainer, we can handle other gossip-related logic or simply call `player.GossipComplete()` to close the gossip window.
+
+By using this script, when a player interacts with a creature that matches the specified trainer entry, the creature will send the trainer window to the player, allowing them to learn new spells and abilities.
+
+Note: Make sure to replace `TRAINER_ENTRY` with the actual entry ID of the trainer creature you want to use in your script.
+
+## SetAcceptWhispers
+This method allows you to set whether the player accepts whispers from other players or not. If set to false, the player will not receive whispers from other players.
+
+### Parameters
+* acceptWhispers: boolean (optional) - Set to true to allow the player to receive whispers, false to block whispers. If no value is provided, it will toggle the current setting.
+
+### Example Usage
+This example demonstrates how to toggle the acceptance of whispers for a player based on their level:
+
+```typescript
+const CONFIG_WHISPER_LEVEL_THRESHOLD = 10;
+
+const onLogin: player_event_on_login = (event: number, player: Player) => {
+    const playerLevel = player.GetLevel();
+
+    if (playerLevel < CONFIG_WHISPER_LEVEL_THRESHOLD) {
+        // Disable whispers for players below the level threshold
+        player.SetAcceptWhispers(false);
+        player.SendBroadcastMessage(`You are currently not accepting whispers until you reach level ${CONFIG_WHISPER_LEVEL_THRESHOLD}.`);
+    } else {
+        // Enable whispers for players at or above the level threshold
+        player.SetAcceptWhispers(true);
+        player.SendBroadcastMessage("You are now accepting whispers from other players.");
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => onLogin(...args));
+```
+
+In this example:
+1. We define a constant `CONFIG_WHISPER_LEVEL_THRESHOLD` to set the minimum level required for a player to accept whispers.
+2. We register the `PLAYER_EVENT_ON_LOGIN` event to execute the `onLogin` function whenever a player logs in.
+3. Inside the `onLogin` function, we retrieve the player's level using `player.GetLevel()`.
+4. We check if the player's level is below the `CONFIG_WHISPER_LEVEL_THRESHOLD`.
+   - If the level is below the threshold, we disable whispers for the player using `player.SetAcceptWhispers(false)` and send them a broadcast message informing them about the level requirement.
+   - If the level is at or above the threshold, we enable whispers for the player using `player.SetAcceptWhispers(true)` and send them a broadcast message indicating that they are now accepting whispers.
+
+This script ensures that players below a certain level threshold do not receive whispers, while players at or above the threshold can receive whispers from other players. The acceptance of whispers is automatically toggled based on the player's level when they log in.
+
+## SetAchievement
+This method allows you to grant an achievement to a player by using the achievement ID. Achievements can be found in the `achievement_reward` table in the world database. For more information about achievements, you can refer to the AzerothCore wiki: https://www.azerothcore.org/wiki/achievement_reward
+
+### Parameters
+* achievementId: number - The ID of the achievement to grant to the player.
+
+### Example Usage
+In this example, we will grant the player the "Jenkins" achievement (ID: 1038) when they kill a specific creature.
+
+```typescript
+const JENKINS_ACHIEVEMENT_ID = 1038;
+const LEROY_JENKINS_CREATURE_ID = 123456;
+
+const onCreatureKill: creature_event_on_killed = (event: number, creature: Creature, killer: Unit) => {
+    if (creature.GetEntry() === LEROY_JENKINS_CREATURE_ID && killer.IsPlayer()) {
+        const player = killer.ToPlayer();
+        if (!player.HasAchieved(JENKINS_ACHIEVEMENT_ID)) {
+            player.SetAchievement(JENKINS_ACHIEVEMENT_ID);
+            player.SendBroadcastMessage("You have earned the 'Jenkins' achievement!");
+        }
+    }
+};
+
+RegisterCreatureEvent(LEROY_JENKINS_CREATURE_ID, CreatureEvents.CREATURE_EVENT_ON_KILLED, (...args) => onCreatureKill(...args));
+```
+
+In this script:
+1. We define constants for the "Jenkins" achievement ID and the creature ID for "Leroy Jenkins".
+2. We register a creature event handler for the `CREATURE_EVENT_ON_KILLED` event.
+3. When a creature is killed, we check if the killed creature is "Leroy Jenkins" and if the killer is a player.
+4. If the conditions are met, we convert the `killer` object to a `Player` object using `ToPlayer()`.
+5. We check if the player has already earned the "Jenkins" achievement using `HasAchieved()`.
+6. If the player hasn't earned the achievement yet, we grant it to them using `SetAchievement()`.
+7. Finally, we send a broadcast message to the player informing them that they have earned the achievement.
+
+This script demonstrates how to grant an achievement to a player based on a specific condition, such as killing a particular creature. You can adapt this script to grant achievements based on various other conditions or criteria.
+
+## SetArenaPoints
+Sets the player's Arena Points to the specified amount. Arena Points are used as a currency to purchase items from Arena Vendors. This method allows you to directly set the player's Arena Points to a desired value.
+
+### Parameters
+* arenaPoints: number - The amount of Arena Points to set for the player.
+
+### Example Usage
+Here's an example of how to use the `SetArenaPoints` method to reward players with Arena Points based on their performance in a custom arena event:
+
+```typescript
+const ARENA_EVENT_ID = 1;
+const ARENA_POINTS_REWARD = 100;
+
+const onArenaFinish: player_event_on_arena_finish = (event: number, player: Player, arenaType: number, isWinner: boolean) => {
+    if (arenaType === ARENA_EVENT_ID) {
+        if (isWinner) {
+            const currentArenaPoints = player.GetArenaPoints();
+            const newArenaPoints = currentArenaPoints + ARENA_POINTS_REWARD;
+            player.SetArenaPoints(newArenaPoints);
+            player.SendBroadcastMessage(`Congratulations! You have been awarded ${ARENA_POINTS_REWARD} Arena Points for winning the event.`);
+        } else {
+            player.SendBroadcastMessage("Better luck next time! Keep practicing to earn Arena Points.");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_ARENA_FINISH, (...args) => onArenaFinish(...args));
+```
+
+In this example:
+1. We define constants for the custom arena event ID (`ARENA_EVENT_ID`) and the amount of Arena Points to reward (`ARENA_POINTS_REWARD`).
+2. We register a player event handler for the `PLAYER_EVENT_ON_ARENA_FINISH` event using `RegisterPlayerEvent`.
+3. Inside the event handler, we check if the arena type matches our custom arena event ID.
+4. If the player is the winner (`isWinner` is true), we retrieve their current Arena Points using `GetArenaPoints()`.
+5. We calculate the new Arena Points by adding the reward amount to the current points.
+6. We use the `SetArenaPoints` method to set the player's Arena Points to the new value.
+7. We send a broadcast message to the player informing them about the Arena Points reward.
+8. If the player is not the winner, we send a different message encouraging them to keep practicing.
+
+This example demonstrates how you can use the `SetArenaPoints` method in combination with other player events and methods to create a custom arena event that rewards players with Arena Points based on their performance.
+
+Note: Make sure to replace `ARENA_EVENT_ID` and `ARENA_POINTS_REWARD` with appropriate values based on your specific arena event and reward system.
+
+## SetAtLoginFlag
+Sets a flag on the player that triggers an action upon their next login. These flags can be used to grant items, run scripts, or perform other actions when the player logs in.
+
+### Parameters
+* flag: number - The login flag to set on the player. The available flags are:
+  * 0 - None 
+  * 1 - Change Race
+  * 2 - Rename
+  * 3 - Customize (Paid name change, appearance change, or race change)
+  * 4 - Reset Spells
+  * 5 - Reset Talents
+  * 6 - Restore Delete
+  * 16 - Refer-A-Friend
+
+### Example Usage
+This example listens for the `PLAYER_EVENT_ON_KILL` event and checks if the victim is a rare spawn. If so, it sets a login flag on the player to grant them a special item the next time they log in.
+
+```typescript
+const RARE_SPAWN_ENTRY = 123456;
+const SPECIAL_ITEM_ENTRY = 654321;
+
+const OnPlayerKill: player_event_on_kill = (event: number, player: Player, victim: Unit) => {
+    if (victim.GetEntry() == RARE_SPAWN_ENTRY) {
+        let hasItem = false;
+        for (let i = 0; i < player.GetItemCount(); i++) {
+            let item = player.GetItemByPos(255, i);
+            if (item && item.GetEntry() == SPECIAL_ITEM_ENTRY) {
+                hasItem = true;
+                break;
+            }
+        }
+
+        if (!hasItem) {
+            player.SetAtLoginFlag(1);
+            ChatHandler.SendMessageToPlayer(player, "You have been granted a special item for slaying the rare spawn. It will be in your mailbox the next time you log in.");
+        }
+    }
+}
+
+const OnLogin: player_event_on_login = (event: number, player: Player) => {
+    if (player.HasAtLoginFlag(1)) {
+        player.RemoveAtLoginFlag(1);
+        MailDraft("Rare Spawn Reward", "Congratulations on slaying the rare spawn! Please accept this special item as a reward.")
+            .AddItem(SPECIAL_ITEM_ENTRY)
+            .SendMailTo(player, MailStationery.MAIL_STATIONERY_GM);
+    }
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_KILL, (...args) => OnPlayerKill(...args));
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => OnLogin(...args));
+```
+
+In this example, when a player kills the specified rare spawn, it checks if they already have the special item. If not, it sets the login flag `1` on the player. 
+
+Then, when the player logs in, it checks if they have the login flag `1` set. If so, it removes the flag and sends them the special item via in-game mail.
+
+This showcases how login flags can be used to trigger actions across play sessions, such as granting rewards for accomplishments in the previous session.
+
+## SetBindPoint
+Sets the player's home location to the specified coordinates, map, and area. This is the location where the player will respawn after death.
+
+### Parameters
+* x: number - The X coordinate of the bind location
+* y: number - The Y coordinate of the bind location
+* z: number - The Z coordinate of the bind location
+* mapId: number - The map ID of the bind location
+* areaId: number - The area ID of the bind location
+
+### Example Usage
+Set the player's bind point to a custom location based on their class:
+```typescript
+const CLASS_BIND_LOCATIONS = {
+    [Classes.CLASS_WARRIOR]: { x: -8799.14, y: 328.206, z: 102.673, mapId: 0, areaId: 1519 },
+    [Classes.CLASS_PALADIN]: { x: -8519.64, y: 852.499, z: 109.61, mapId: 0, areaId: 1537 },
+    [Classes.CLASS_HUNTER]: { x: -5062.26, y: -1261.89, z: 510.475, mapId: 1, areaId: 400 },
+    [Classes.CLASS_ROGUE]: { x: -8753.11, y: 367.625, z: 101.056, mapId: 0, areaId: 1519 },
+    [Classes.CLASS_PRIEST]: { x: -8517.21, y: 848.877, z: 109.61, mapId: 0, areaId: 1537 },
+    [Classes.CLASS_DEATH_KNIGHT]: { x: 2280.12, y: -5275.32, z: 82.1443, mapId: 609, areaId: 4298 },
+    [Classes.CLASS_SHAMAN]: { x: -2916.61, y: -257.138, z: 53.0241, mapId: 1, areaId: 406 },
+    [Classes.CLASS_MAGE]: { x: -9018.52, y: 874.28, z: 129.682, mapId: 0, areaId: 1519 },
+    [Classes.CLASS_WARLOCK]: { x: -8960.51, y: 1027.67, z: 101.302, mapId: 0, areaId: 1519 },
+    [Classes.CLASS_DRUID]: { x: 7865.78, y: -2493.64, z: 487.838, mapId: 1, areaId: 493 }
+};
+
+const OnFirstLogin: player_event_on_first_login = (event: number, player: Player) => {
+    const classBindLocation = CLASS_BIND_LOCATIONS[player.GetClass()];
+    
+    if (classBindLocation) {
+        const { x, y, z, mapId, areaId } = classBindLocation;
+        player.SetBindPoint(x, y, z, mapId, areaId);
+        player.SendBroadcastMessage(`Your home location has been set to the ${player.GetClassAsString()} bind point.`);
+    } else {
+        player.SendBroadcastMessage("No class-specific bind point found. Using default bind location.");
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_FIRST_LOGIN, (...args) => OnFirstLogin(...args));
+```
+
+In this example, we define a `CLASS_BIND_LOCATIONS` object that maps each class to a specific bind location. When a player logs in for the first time, we retrieve their class using `player.GetClass()` and check if a corresponding bind location exists in the `CLASS_BIND_LOCATIONS` object.
+
+If a class-specific bind location is found, we extract the coordinates, map ID, and area ID from the object and pass them to `player.SetBindPoint()` to set the player's home location. We also send a broadcast message to the player informing them that their home location has been set to the class-specific bind point.
+
+If no class-specific bind location is found, we send a message to the player indicating that the default bind location will be used.
+
+By using this script, players of different classes will have their bind points automatically set to predefined locations based on their class when they log in for the first time.
+
+## SetCoinage
+This method sets the player's total amount of money to the specified amount in copper. The amount can be a combination of gold, silver, and copper, but the method takes the total amount in copper as the argument.
+
+### Parameters
+* copperAmt: number - The total amount of money in copper to set for the player.
+
+### Example Usage
+In this example, we will create a script that rewards players with a specific amount of money based on their level when they complete a particular quest. The reward amount will be calculated based on the player's level and the base reward amount.
+
+```typescript
+const QUEST_ENTRY = 1234; // Replace with the actual quest entry ID
+const BASE_REWARD_COPPER = 10000; // 1 gold
+
+const QuestComplete: player_event_on_quest_complete = (event: number, player: Player, quest: number) => {
+    if (quest === QUEST_ENTRY) {
+        const playerLevel = player.GetLevel();
+        const rewardMultiplier = playerLevel * 0.5; // Adjust the multiplier as needed
+        const totalReward = BASE_REWARD_COPPER * rewardMultiplier;
+
+        const currentCoinage = player.GetCoinage();
+        const newCoinage = currentCoinage + totalReward;
+
+        player.SetCoinage(newCoinage);
+
+        player.SendBroadcastMessage(`You have been rewarded with ${totalReward / 100} silver for completing the quest at level ${playerLevel}!`);
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_QUEST_COMPLETE, (...args) => QuestComplete(...args));
+```
+
+In this script:
+1. We define the `QUEST_ENTRY` constant with the entry ID of the quest we want to track and the `BASE_REWARD_COPPER` constant with the base reward amount in copper (1 gold = 10000 copper).
+
+2. We create a function called `QuestComplete` that will be triggered when a player completes a quest.
+
+3. Inside the function, we check if the completed quest's entry ID matches the `QUEST_ENTRY` we are interested in.
+
+4. If there is a match, we calculate the reward amount based on the player's level. In this example, we multiply the player's level by a reward multiplier (0.5) and then multiply the result by the base reward amount. Adjust the multiplier as needed to balance the rewards.
+
+5. We retrieve the player's current coinage using `player.GetCoinage()` and add the calculated reward amount to it to determine the new coinage.
+
+6. We use `player.SetCoinage(newCoinage)` to set the player's money to the new coinage amount.
+
+7. Finally, we send a broadcast message to the player, informing them about the reward they received for completing the quest at their current level.
+
+8. We register the `QuestComplete` function to be triggered whenever a player completes a quest using `RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_QUEST_COMPLETE, (...args) => QuestComplete(...args))`.
+
+This script demonstrates how to use the `SetCoinage` method to modify a player's money based on quest completion and their level, providing a more dynamic and level-based reward system.
+
+## SetDrunkValue
+Set the player's intoxication level to a specific value. The drunk value is used to determine the visual effects and behavior changes associated with being intoxicated in the game.
+
+### Parameters
+* drunkValue: number - The desired intoxication level for the player. Valid range is from 0 to 100.
+
+### Example Usage
+This example demonstrates how to create a custom item that, when used by the player, will set their intoxication level based on the item's quality.
+
+```typescript
+const ITEM_ENTRY = 123456;
+
+const ItemUse: player_event_on_item_use = (event: number, player: Player, item: Item, target: GameObject | Item | Player | Unit) => {
+    if (item.GetEntry() === ITEM_ENTRY) {
+        let quality = item.GetQuality();
+        let drunkValue = 0;
+
+        switch (quality) {
+            case 0: // Poor
+                drunkValue = 10;
+                break;
+            case 1: // Common
+                drunkValue = 30;
+                break;
+            case 2: // Uncommon
+                drunkValue = 50;
+                break;
+            case 3: // Rare
+                drunkValue = 70;
+                break;
+            case 4: // Epic
+                drunkValue = 90;
+                break;
+            case 5: // Legendary
+                drunkValue = 100;
+                break;
+        }
+
+        player.SetDrunkValue(drunkValue);
+        player.SendBroadcastMessage(`You consume the ${item.GetName()} and feel your intoxication level rise.`);
+
+        if (drunkValue >= 50) {
+            player.CastSpell(player, 32959, true); // Cast the "Intoxicated" visual effect on the player
+        }
+
+        player.DestroyItemCount(ITEM_ENTRY, 1, true); // Remove one item from the player's inventory
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_ITEM_USE, (...args) => ItemUse(...args));
+```
+
+In this example:
+1. We define a custom item entry (`ITEM_ENTRY`) that will trigger the script when used by the player.
+2. In the `ItemUse` event handler, we check if the used item matches our custom item entry.
+3. We determine the drunk value based on the item's quality, with higher quality items resulting in higher intoxication levels.
+4. We set the player's intoxication level using `player.SetDrunkValue(drunkValue)`.
+5. We send a broadcast message to the player, informing them about the effect of consuming the item.
+6. If the drunk value is greater than or equal to 50, we cast the "Intoxicated" visual effect on the player using `player.CastSpell()`.
+7. Finally, we remove one instance of the custom item from the player's inventory using `player.DestroyItemCount()`.
+
+This script showcases how the `SetDrunkValue` method can be used in combination with other player methods and game events to create a custom item with intoxication effects.
+
+## SetFFA
+This method allows you to toggle the FFA (Free-for-All) flag for a player. When the FFA flag is enabled, the player can attack and be attacked by other players regardless of their faction or party status. This is commonly used in custom PvP scenarios or events.
+
+### Parameters
+* applyFFA (optional): boolean - Determines whether to apply or remove the FFA flag. If set to 'true', the FFA flag will be enabled. If set to 'false', the FFA flag will be disabled. If not provided, the default value is 'true'.
+
+### Example Usage:
+Create a custom PvP event where players can toggle their FFA status.
+```typescript
+const FFA_ZONE_ID = 1234; // Replace with the desired zone ID
+
+const OnEnterWorld: player_event_on_enter_world = (event: number, player: Player) => {
+    // Check if the player is in the designated FFA zone
+    if (player.GetZoneId() === FFA_ZONE_ID) {
+        // Enable FFA for the player
+        player.SetFFA(true);
+        player.SendBroadcastMessage("You have entered the FFA zone. Be prepared for combat!");
+    }
+};
+
+const OnUpdateZone: player_event_on_update_zone = (event: number, player: Player, newZone: number, newArea: number) => {
+    // Check if the player is leaving the FFA zone
+    if (player.GetZoneId() !== FFA_ZONE_ID && player.HasFlag(PlayerFlags.FREE_FOR_ALL_PVP)) {
+        // Disable FFA for the player
+        player.SetFFA(false);
+        player.SendBroadcastMessage("You have left the FFA zone. PvP restrictions are now in effect.");
+    }
+};
+
+const OnChat: player_event_on_chat = (event: number, player: Player, msg: string, type: number, lang: number) => {
+    // Check if the player types the command to toggle FFA
+    if (msg === "!ffa") {
+        // Toggle the player's FFA status
+        const isFFA = player.HasFlag(PlayerFlags.FREE_FOR_ALL_PVP);
+        player.SetFFA(!isFFA);
+
+        if (!isFFA) {
+            player.SendBroadcastMessage("FFA mode enabled. You can now attack and be attacked by other players!");
+        } else {
+            player.SendBroadcastMessage("FFA mode disabled. PvP restrictions are now in effect.");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_ENTER_WORLD, (...args) => OnEnterWorld(...args));
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_UPDATE_ZONE, (...args) => OnUpdateZone(...args));
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_CHAT, (...args) => OnChat(...args));
+```
+In this example:
+1. When a player enters the designated FFA zone (identified by `FFA_ZONE_ID`), their FFA flag is automatically enabled using `player.SetFFA(true)`. They receive a message indicating that they have entered the FFA zone.
+2. When a player leaves the FFA zone, their FFA flag is automatically disabled using `player.SetFFA(false)`. They receive a message indicating that they have left the FFA zone and PvP restrictions are back in effect.
+3. Players can manually toggle their FFA status by typing the command "!ffa" in the chat. The script checks for this command in the `OnChat` event and toggles the player's FFA flag accordingly using `player.SetFFA(!isFFA)`. The player receives a message confirming the change in their FFA status.
+
+This script provides a dynamic FFA system where players can engage in unrestricted PvP combat within designated zones or by manually toggling their FFA status.
+
+## SetFactionForRace
+Sets the player's faction standing to match that of the specified race. This can be useful for changing a player's faction standing to match a different race, such as changing a Blood Elf to have the same faction standing as an Orc.
+
+### Parameters
+* raceId: number - The ID of the race to set the faction standing to. You can find race IDs in the DBC files or in the [TC/AC Wiki - Races](https://www.azerothcore.org/wiki/race).
+
+### Example Usage
+Change a player's faction standing to match a different race when they equip a specific item.
+```typescript
+const RACE_BLOODELF = 10;
+const RACE_ORC = 2;
+const ITEM_ENTRY_FACTION_CHANGER = 123456;
+
+const OnEquipItem: player_event_on_equip_item = (event: number, player: Player, item: Item) => {
+    if (item.GetEntry() === ITEM_ENTRY_FACTION_CHANGER) {
+        if (player.GetRace() === RACE_BLOODELF) {
+            player.SetFactionForRace(RACE_ORC);
+            player.SendBroadcastMessage("Your faction standing has been changed to match that of an Orc!");
+        } else {
+            player.SendBroadcastMessage("This item can only be used by Blood Elves.");
+            player.RemoveItem(item.GetEntry(), 1);
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_EQUIP_ITEM, (...args) => OnEquipItem(...args));
+```
+
+In this example, when a player equips an item with the entry `ITEM_ENTRY_FACTION_CHANGER`, the script checks if the player is a Blood Elf. If they are, it changes their faction standing to match that of an Orc using `SetFactionForRace(RACE_ORC)` and sends them a message indicating the change. If the player is not a Blood Elf, it sends them a message saying the item can only be used by Blood Elves and removes the item from their inventory.
+
+This script showcases how `SetFactionForRace` can be used in combination with other player methods and events to create interesting gameplay mechanics and interactions based on a player's race and faction standing.
+
+## SetFreeTalentPoints
+This method sets the player's free talent points to the specified amount for their current talent specialization. This allows the player to reallocate their talent points and customize their character build.
+
+### Parameters
+* talentPointAmt: number - The number of free talent points to set for the player's current specialization.
+
+### Example Usage
+In this example, we create a script that rewards players with bonus talent points based on their level when they complete a specific quest. The script listens for the `PLAYER_EVENT_ON_QUEST_COMPLETE` event and checks if the completed quest ID matches the desired quest. If the player's level is above a certain threshold, they are granted additional talent points using the `SetFreeTalentPoints` method.
+
+```typescript
+const QUEST_ID = 12345; // Replace with the desired quest ID
+const LEVEL_THRESHOLD = 60; // Minimum level required for bonus talent points
+const BONUS_TALENT_POINTS = 5; // Number of bonus talent points to grant
+
+const onQuestComplete: player_event_on_quest_complete = (event: number, player: Player, quest: Quest) => {
+    if (quest.GetId() === QUEST_ID) {
+        const playerLevel = player.GetLevel();
+        if (playerLevel >= LEVEL_THRESHOLD) {
+            const currentTalentPoints = player.GetFreeTalentPoints();
+            const newTalentPoints = currentTalentPoints + BONUS_TALENT_POINTS;
+            player.SetFreeTalentPoints(newTalentPoints);
+            player.SendBroadcastMessage(`You have been granted ${BONUS_TALENT_POINTS} bonus talent points for completing the quest at level ${playerLevel}!`);
+        } else {
+            player.SendBroadcastMessage(`Complete the quest at level ${LEVEL_THRESHOLD} or higher to receive bonus talent points.`);
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_QUEST_COMPLETE, (...args) => onQuestComplete(...args));
+```
+
+In this script:
+1. We define constants for the quest ID (`QUEST_ID`), the minimum level required for bonus talent points (`LEVEL_THRESHOLD`), and the number of bonus talent points to grant (`BONUS_TALENT_POINTS`).
+2. We register the `onQuestComplete` function to handle the `PLAYER_EVENT_ON_QUEST_COMPLETE` event.
+3. When a player completes a quest, the `onQuestComplete` function is triggered.
+4. We check if the completed quest ID matches the desired quest ID (`QUEST_ID`).
+5. If the quest ID matches, we check if the player's level is greater than or equal to the `LEVEL_THRESHOLD`.
+6. If the player meets the level requirement, we retrieve their current free talent points using `GetFreeTalentPoints()`.
+7. We calculate the new number of talent points by adding the `BONUS_TALENT_POINTS` to the current talent points.
+8. We set the player's free talent points to the new value using `SetFreeTalentPoints(newTalentPoints)`.
+9. We send a broadcast message to the player informing them about the bonus talent points they received.
+10. If the player does not meet the level requirement, we send a broadcast message informing them about the level requirement to receive bonus talent points.
+
+This script demonstrates how the `SetFreeTalentPoints` method can be used to dynamically adjust a player's talent points based on certain conditions or achievements, such as completing a specific quest at a certain level.
+
+## SetGMChat
+Toggle the visibility of the GM tag for the player. When enabled, the player's chat messages will have the "Blizz" tag prepended to them, indicating they are a GM. This is useful for identifying GM characters from normal players.
+
+### Parameters
+* on?: boolean - Optional parameter to enable or disable GM chat tag. If not provided, the state will be toggled.
+
+### Example Usage
+This example demonstrates how to enable or disable the GM chat tag based on the player's GM rank. It assumes there is a custom GMRank command that allows changing the player's GM rank.
+
+```typescript
+const GMRankCommand: player_event_on_command = (event: number, player: Player, command: string, args: string[]) => {
+    const rank = parseInt(args[0]);
+
+    if (isNaN(rank) || rank < 0 || rank > 3) {
+        player.SendBroadcastMessage("Invalid GM rank. Usage: .gmrank <0-3>");
+        return;
+    }
+
+    player.SetGMRank(rank);
+
+    if (rank > 0) {
+        player.SetGMChat(true);
+        player.SendBroadcastMessage(`GM chat tag enabled. Your rank is now ${rank}.`);
+    } else {
+        player.SetGMChat(false);
+        player.SendBroadcastMessage("GM chat tag disabled. You are now a normal player.");
+    }
+
+    player.SaveToDB();
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_COMMAND, (...args) => GMRankCommand(...args), "gmrank");
+```
+
+In this example:
+1. The script listens for the "gmrank" command using the `PLAYER_EVENT_ON_COMMAND` event.
+2. It extracts the rank argument from the command and validates it. If the rank is invalid, an error message is sent to the player.
+3. If the rank is valid, it sets the player's GM rank using `player.SetGMRank(rank)`.
+4. If the rank is greater than 0, it enables the GM chat tag using `player.SetGMChat(true)` and sends a confirmation message to the player.
+5. If the rank is 0, it disables the GM chat tag using `player.SetGMChat(false)` and sends a message to the player indicating they are now a normal player.
+6. Finally, it saves the player's changes to the database using `player.SaveToDB()`.
+
+This script allows GMs to easily toggle their GM chat tag based on their assigned rank, providing clear identification in chat channels.
+
+## SetGMVisible
+Toggles the visibility of the player to other players and creatures in the world. When GM visibility is off, the player will be invisible to other players and creatures, unless they are in the same group or raid. 
+
+### Parameters
+gmVisible?: boolean - (Optional) Sets the player's visibility on or off. If not provided, it will toggle the current state.
+- `true`: The player becomes visible to other players and creatures.
+- `false`: The player becomes invisible to other players and creatures.
+
+### Example Usage
+Here's an example of how to use the `SetGMVisible` method to create a simple GM invisibility toggle command:
+
+```typescript
+// GM command to toggle invisibility
+const GMInvisibilityCommand: player_event_on_command = (event: number, player: Player, command: string) => {
+    if (command === "gminvis") {
+        if (!player.IsGM()) {
+            player.SendBroadcastMessage("You do not have permission to use this command.");
+            return;
+        }
+
+        player.SetGMVisible(!player.IsGMVisible());
+
+        if (player.IsGMVisible()) {
+            player.SendBroadcastMessage("GM invisibility disabled. You are now visible to other players.");
+        } else {
+            player.SendBroadcastMessage("GM invisibility enabled. You are now invisible to other players.");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_COMMAND, (...args) => GMInvisibilityCommand(...args));
+```
+
+In this example, we create a custom GM command "gminvis" that toggles the player's GM visibility when executed. Here's how it works:
+
+1. We check if the command entered by the player is "gminvis".
+2. We verify if the player has GM permissions using the `IsGM()` method. If not, we send an error message and return.
+3. We call the `SetGMVisible` method, passing the opposite of the player's current visibility state using `!player.IsGMVisible()`. This toggles the visibility.
+4. Depending on the new visibility state, we send a corresponding message to the player using `SendBroadcastMessage` to confirm the action.
+
+With this script, when a GM player types the command "gminvis", their visibility will be toggled on or off, and they will receive a message indicating the current state of their invisibility.
+
+Note: Make sure to grant the appropriate GM permissions to the desired player accounts for this command to work as intended.
+
+## SetGameMaster
+This method allows you to toggle the player's GM mode on or off. When a player is in GM mode, they have access to special commands and abilities that are not available to regular players. This can be useful for testing and debugging purposes, or for administering the game.
+
+### Parameters
+* setGmMode: boolean (optional) - If set to true, the player will be put into GM mode. If set to false, the player will be taken out of GM mode. If not specified, the player's GM mode will be toggled (if currently in GM mode, it will be turned off, and vice versa).
+
+### Example Usage
+Here's an example of how you might use the SetGameMaster method in a script:
+
+```typescript
+const OnPlayerChat: player_event_on_chat = (event: number, player: Player, msg: string, Type: number, lang: Language): void => {
+    if (msg === '!gm') {
+        if (player.GetGMRank() >= 3) { // Check if the player has a GM rank of 3 or higher
+            player.SetGameMaster(); // Toggle the player's GM mode
+            if (player.IsGameMaster()) {
+                player.SendBroadcastMessage('You are now a Game Master.');
+                player.LearnSpell(27683); // Teach the player the "GM" spell
+                player.LearnSpell(1908); // Teach the player the "Uber Heal Over Time" spell
+                player.SetMaxHealth(player.GetMaxHealth() * 10); // Increase the player's max health by 10 times
+                player.SetMaxPower(player.GetPowerType(), player.GetMaxPower(player.GetPowerType()) * 10); // Increase the player's max power by 10 times
+            } else {
+                player.SendBroadcastMessage('You are no longer a Game Master.');
+                player.RemoveSpell(27683); // Remove the "GM" spell from the player
+                player.RemoveSpell(1908); // Remove the "Uber Heal Over Time" spell from the player
+                player.SetMaxHealth(player.GetMaxHealth() / 10); // Reduce the player's max health back to normal
+                player.SetMaxPower(player.GetPowerType(), player.GetMaxPower(player.GetPowerType()) / 10); // Reduce the player's max power back to normal
+            }
+        } else {
+            player.SendBroadcastMessage('You do not have permission to use this command.');
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_CHAT, (...args) => OnPlayerChat(...args));
+```
+
+In this example, when a player types '!gm' in the chat, the script checks if the player has a GM rank of 3 or higher. If they do, it toggles their GM mode using the SetGameMaster method. If the player is put into GM mode, the script teaches them the "GM" and "Uber Heal Over Time" spells, and increases their max health and power by 10 times. If the player is taken out of GM mode, the script removes the spells and reduces their max health and power back to normal. If the player does not have a GM rank of 3 or higher, they are sent a message telling them they do not have permission to use the command.
+
+## SetGender
+This method sets the gender of the player. The gender can be either male or female, represented by the following constants:
+- GENDER_MALE = 0
+- GENDER_FEMALE = 1
+
+### Parameters
+- gender: number - The gender to set for the player. It should be either GENDER_MALE or GENDER_FEMALE.
+
+### Example Usage
+This example demonstrates how to create a command that allows players to change their gender based on their input.
+
+```typescript
+// Constants for gender
+const GENDER_MALE = 0;
+const GENDER_FEMALE = 1;
+
+// Function to handle the gender change command
+function handleGenderChangeCommand(player: Player, args: string[]): boolean {
+    if (args.length === 0) {
+        player.SendBroadcastMessage("Usage: .changegender [male|female]");
+        return false;
+    }
+
+    const genderInput = args[0].toLowerCase();
+    let gender: number;
+
+    if (genderInput === "male") {
+        gender = GENDER_MALE;
+    } else if (genderInput === "female") {
+        gender = GENDER_FEMALE;
+    } else {
+        player.SendBroadcastMessage("Invalid gender. Please specify either 'male' or 'female'.");
+        return false;
+    }
+
+    player.SetGender(gender);
+    player.SendBroadcastMessage(`Your gender has been changed to ${genderInput}.`);
+    return true;
+}
+
+// Register the gender change command
+RegisterPlayerCommand("changegender", "Allows you to change your character's gender.", handleGenderChangeCommand);
+```
+
+In this example:
+1. We define constants `GENDER_MALE` and `GENDER_FEMALE` to represent the gender values.
+2. We create a function `handleGenderChangeCommand` that takes the player and command arguments as parameters.
+3. We check if the player provided a gender argument. If not, we send a usage message and return `false` to indicate an invalid command.
+4. We convert the gender input to lowercase for case-insensitive comparison.
+5. Based on the gender input, we set the `gender` variable to either `GENDER_MALE` or `GENDER_FEMALE`. If an invalid gender is provided, we send an error message and return `false`.
+6. We call `player.SetGender(gender)` to set the player's gender to the specified value.
+7. We send a confirmation message to the player indicating that their gender has been changed.
+8. Finally, we register the "changegender" command with the `RegisterPlayerCommand` function, providing a description and the `handleGenderChangeCommand` function as the command handler.
+
+This example showcases how to create a custom command that allows players to change their gender using the `SetGender` method of the `Player` class. The command validates the player's input and sets the gender accordingly, providing appropriate feedback to the player.
+
+## SetGuildRank
+This method allows you to set the guild rank of a player. The rank is specified by a number that corresponds to the rank index in the guild_rank table of the characters database. For more information about guild ranks, you can refer to the AzerothCore wiki: https://www.azerothcore.org/wiki/guild_rank
+
+### Parameters
+- rank: number - The index of the guild rank to set for the player.
+
+### Example Usage
+This example demonstrates how to set a player's guild rank based on their total playtime.
+
+```typescript
+const RANK_INITIATE = 1;
+const RANK_MEMBER = 2;
+const RANK_VETERAN = 3;
+const RANK_OFFICER = 4;
+const RANK_LEADER = 5;
+
+const UpdateGuildRank: player_event_on_login = (event: number, player: Player) => {
+    const totalPlayTime = player.GetTotalPlayedTime();
+    let newRank = RANK_INITIATE;
+
+    if (totalPlayTime >= 604800) { // 7 days in seconds
+        newRank = RANK_MEMBER;
+    }
+
+    if (totalPlayTime >= 2592000) { // 30 days in seconds
+        newRank = RANK_VETERAN;
+    }
+
+    if (totalPlayTime >= 7776000) { // 90 days in seconds
+        newRank = RANK_OFFICER;
+    }
+
+    if (player.GetGuildId() == 0) {
+        // Player is not in a guild, do nothing
+        return;
+    }
+
+    if (player.GetGuildRank() != newRank) {
+        player.SetGuildRank(newRank);
+        player.SendBroadcastMessage(`Your guild rank has been updated to ${player.GetGuildRank()} based on your total playtime.`);
+    }
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => UpdateGuildRank(...args));
+```
+
+In this example:
+1. We define constants for each guild rank index to improve code readability.
+2. We register a player event handler for the `PLAYER_EVENT_ON_LOGIN` event.
+3. When a player logs in, we retrieve their total playtime using the `GetTotalPlayedTime()` method.
+4. We determine the new guild rank based on the total playtime using a series of conditional statements.
+5. We check if the player is in a guild using the `GetGuildId()` method. If the player is not in a guild, we exit the function.
+6. If the player's current guild rank (retrieved using `GetGuildRank()`) is different from the new rank, we update their rank using the `SetGuildRank()` method.
+7. Finally, we send a message to the player informing them that their guild rank has been updated based on their total playtime.
+
+This script ensures that players' guild ranks are automatically updated based on their dedication and time spent playing the game, providing a sense of progression within the guild hierarchy.
+
+## SetHonorLastWeekStandingPos
+Sets the player's honor standing position from the previous week. This method is useful for restoring a player's previous week's honor standing position, or for manually adjusting it for custom features or rewards.
+
+### Parameters
+* standingPos: number - The standing position to set for the previous week.
+
+### Example Usage
+In this example, we will create a script that rewards players based on their previous week's honor standing position. Players who finished in the top 10 positions will receive a special reward.
+
+```typescript
+const REWARD_ITEM_ENTRY = 12345; // Replace with your desired item entry
+const REWARD_ITEM_COUNT = 1;
+
+const OnLogin: player_event_on_login = (event: number, player: Player) => {
+    // Get the player's previous week's honor standing position
+    const standingPos = player.GetHonorLastWeekStandingPos();
+
+    // Check if the player finished in the top 10 positions
+    if (standingPos > 0 && standingPos <= 10) {
+        // Reward the player with a special item
+        const rewardItem = player.AddItem(REWARD_ITEM_ENTRY, REWARD_ITEM_COUNT);
+
+        if (rewardItem) {
+            // Send a message to the player
+            player.SendBroadcastMessage(`Congratulations on finishing in the top 10 last week! You have been rewarded with a special item.`);
+        } else {
+            // If the item couldn't be added (e.g., inventory full), send an error message
+            player.SendBroadcastMessage(`Error: Unable to receive the reward item. Please make sure you have enough inventory space.`);
+        }
+    }
+
+    // Set the player's previous week's honor standing position to their current position
+    const currentStandingPos = player.GetHonorStandingPos();
+    player.SetHonorLastWeekStandingPos(currentStandingPos);
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, OnLogin);
+```
+
+In this script:
+1. We define the reward item entry and the number of items to be given as constants.
+2. We register the `OnLogin` event to trigger when a player logs in.
+3. Inside the event handler, we retrieve the player's previous week's honor standing position using `GetHonorLastWeekStandingPos()`.
+4. We check if the player finished in the top 10 positions (standing position greater than 0 and less than or equal to 10).
+5. If the player is eligible for the reward, we add the reward item to their inventory using `AddItem()`.
+   - If the item is successfully added, we send a congratulatory message to the player.
+   - If the item couldn't be added (e.g., inventory is full), we send an error message to the player.
+6. Finally, we update the player's previous week's honor standing position to their current position using `SetHonorLastWeekStandingPos()`.
+
+This script ensures that players who performed well in the previous week's honor standings receive a special reward upon logging in. It also updates their previous week's standing position to their current position, so the reward is only given once per week.
+
+## SetHonorPoints
+This method allows you to set the player's honor points to a specific value. Honor points are a currency earned through PvP activities and can be used to purchase various rewards from the Honor vendor.
+
+### Parameters
+* honorPoints: number - The amount of honor points to set for the player.
+
+### Example Usage
+In this example, we'll create a script that rewards players with bonus honor points based on their lifetime honorable kills when they log in.
+
+```typescript
+const HONOR_POINTS_PER_KILL = 10;
+const HONOR_POINTS_BONUS_THRESHOLD = 100;
+const HONOR_POINTS_BONUS = 1000;
+
+const OnLogin: player_event_on_login = (event: number, player: Player) => {
+    // Get the player's lifetime honorable kills
+    const lifetimeHonorableKills = player.GetUInt32Value(PlayerFields.PLAYER_FIELD_LIFETIME_HONORABLE_KILLS);
+
+    // Calculate the bonus honor points based on lifetime kills
+    const bonusHonorPoints = lifetimeHonorableKills * HONOR_POINTS_PER_KILL;
+
+    // Get the player's current honor points
+    const currentHonorPoints = player.GetHonorPoints();
+
+    // Set the player's new honor points
+    player.SetHonorPoints(currentHonorPoints + bonusHonorPoints);
+
+    // Send a message to the player about their bonus honor points
+    player.SendBroadcastMessage(`You have been awarded ${bonusHonorPoints} bonus honor points for your lifetime honorable kills!`);
+
+    // If the player's lifetime kills exceed the bonus threshold, give them an additional bonus
+    if (lifetimeHonorableKills >= HONOR_POINTS_BONUS_THRESHOLD) {
+        player.SetHonorPoints(currentHonorPoints + bonusHonorPoints + HONOR_POINTS_BONUS);
+        player.SendBroadcastMessage(`You have also been awarded an additional ${HONOR_POINTS_BONUS} honor points for reaching ${HONOR_POINTS_BONUS_THRESHOLD} lifetime honorable kills!`);
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => OnLogin(...args));
+```
+
+In this script:
+1. We define constants for the number of honor points awarded per lifetime kill, the bonus threshold, and the bonus amount.
+2. When a player logs in, we retrieve their lifetime honorable kills using `GetUInt32Value(PlayerFields.PLAYER_FIELD_LIFETIME_HONORABLE_KILLS)`.
+3. We calculate the bonus honor points by multiplying the lifetime kills by the honor points per kill.
+4. We get the player's current honor points using `GetHonorPoints()`.
+5. We set the player's new honor points using `SetHonorPoints()`, adding the bonus honor points to their current honor points.
+6. We send a message to the player informing them about their bonus honor points.
+7. If the player's lifetime kills exceed the bonus threshold, we give them an additional bonus using `SetHonorPoints()` and send another message.
+
+This script encourages players to engage in PvP activities by rewarding them with bonus honor points based on their lifetime honorable kills, with an additional bonus for reaching a certain threshold.
+
+## SetHonorStoredKills
+This method sets the player's stored honor kills, which can be used for various purposes such as rewards, achievements, or rankings. The kills can be set as honorable or dishonorable based on the second parameter.
+
+### Parameters
+* kills: number - The number of kills to set.
+* honorable: boolean (optional) - Determines whether the kills are honorable or dishonorable. If not provided, the default value is 'true'.
+
+### Example Usage
+In this example, we'll create a script that rewards players with bonus honor kills based on their total playtime. The script will be triggered when a player logs in.
+
+```typescript
+const BONUS_HONOR_KILLS_PER_HOUR = 5;
+
+const OnLogin: player_event_on_login = (event: number, player: Player) => {
+    // Get the player's total playtime in seconds
+    const totalPlaytime = player.GetTotalPlayedTime();
+
+    // Convert playtime to hours
+    const playtimeHours = Math.floor(totalPlaytime / 3600);
+
+    // Calculate bonus honor kills based on playtime
+    const bonusHonorKills = playtimeHours * BONUS_HONOR_KILLS_PER_HOUR;
+
+    // Get the player's current honor kills
+    const currentHonorKills = player.GetHonorStoredKills(true);
+
+    // Set the new total honor kills
+    const newTotalHonorKills = currentHonorKills + bonusHonorKills;
+    player.SetHonorStoredKills(newTotalHonorKills, true);
+
+    // Send a message to the player
+    player.SendBroadcastMessage(`You have been awarded ${bonusHonorKills} bonus honor kills based on your total playtime!`);
+    player.SendBroadcastMessage(`Your new total honorable kills: ${newTotalHonorKills}`);
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => OnLogin(...args));
+```
+
+In this script:
+1. We define a constant `BONUS_HONOR_KILLS_PER_HOUR` to set the number of bonus honor kills awarded per hour of playtime.
+2. We create an event handler function `OnLogin` that triggers when a player logs in.
+3. We retrieve the player's total playtime in seconds using `GetTotalPlayedTime()` and convert it to hours.
+4. We calculate the bonus honor kills by multiplying the playtime hours by the `BONUS_HONOR_KILLS_PER_HOUR`.
+5. We get the player's current honorable kills using `GetHonorStoredKills(true)`.
+6. We calculate the new total honor kills by adding the bonus honor kills to the current honor kills.
+7. We set the new total honorable kills using `SetHonorStoredKills(newTotalHonorKills, true)`.
+8. Finally, we send a broadcast message to the player informing them about the bonus honor kills and their new total honorable kills.
+
+This script encourages players to spend more time playing the game by rewarding them with bonus honor kills based on their playtime.
+
+## SetKnownTitle
+This method adds a specified title to the player's list of known titles. These titles can be referenced in the CharTitles DBC file. For more information about titles, you can find more details here: https://www.azerothcore.org/wiki/dbc_chartitles
+
+### Parameters
+- titleId: number - The ID of the title from the CharTitles DBC file.
+
+### Example Usage
+In this example, we'll create a script that rewards players with a special title when they complete a specific quest. We'll assume the quest ID is 12345 and the title ID is 123.
+
+```typescript
+const QUEST_ID = 12345;
+const TITLE_ID = 123;
+
+const OnQuestComplete: player_event_on_quest_complete = (event: number, player: Player, quest: number) => {
+    if (quest === QUEST_ID) {
+        if (!player.HasTitle(TITLE_ID)) {
+            player.SetKnownTitle(TITLE_ID);
+            player.SendNotification("Congratulations! You have earned the title for completing this quest.");
+        } else {
+            player.SendNotification("You have already earned this title.");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_QUEST_COMPLETE, (...args) => OnQuestComplete(...args));
+```
+
+In this script:
+1. We define constants for the quest ID and title ID for better readability and maintainability.
+2. We create a function called `OnQuestComplete` that will be triggered when a player completes a quest.
+3. Inside the function, we check if the completed quest ID matches the one we're interested in (12345).
+4. If it does, we then check if the player already has the title using the `HasTitle` method.
+5. If the player doesn't have the title, we add it to their list of known titles using `SetKnownTitle` and send them a congratulatory notification.
+6. If the player already has the title, we send them a different notification letting them know they've already earned it.
+7. Finally, we register the `OnQuestComplete` function to be triggered whenever a player completes a quest using `RegisterPlayerEvent`.
+
+This script demonstrates how to use the `SetKnownTitle` method in a practical scenario, rewarding players with a special title for completing a specific quest. It also showcases additional methods like `HasTitle` and `SendNotification` to enhance the functionality and user experience.
+
+## SetLifetimeKills
+Sets the player's total number of lifetime honorable kills to the specified value. This can be useful for custom PvP systems or achievements that track a player's PvP progress over time.
+
+### Parameters
+* honorableKills: number - The number of lifetime honorable kills to set for the player.
+
+### Example Usage
+In this example, we'll create a custom PvP system where players can earn special titles based on their lifetime honorable kills. When a player reaches certain milestones, they'll receive a title and a bonus item.
+
+```typescript
+const KILLS_NOVICE = 50;
+const KILLS_ADEPT = 100;
+const KILLS_EXPERT = 250;
+const KILLS_MASTER = 500;
+const KILLS_GRANDMASTER = 1000;
+
+const TITLE_NOVICE = 1;
+const TITLE_ADEPT = 2;
+const TITLE_EXPERT = 3;
+const TITLE_MASTER = 4;
+const TITLE_GRANDMASTER = 5;
+
+const BONUS_ITEM_ENTRY = 12345;
+
+const CheckPvPProgress: player_event_on_kill_player = (event: number, killer: Player, killed: Player) => {
+    const lifetimeKills = killer.GetLifetimeKills();
+
+    if (lifetimeKills >= KILLS_GRANDMASTER && !killer.HasTitle(TITLE_GRANDMASTER)) {
+        killer.SetLifetimeKills(KILLS_GRANDMASTER);
+        killer.SetKnownTitle(TITLE_GRANDMASTER);
+        killer.AddItem(BONUS_ITEM_ENTRY, 1);
+        killer.SendBroadcastMessage("You have earned the title of PvP Grandmaster!");
+    } else if (lifetimeKills >= KILLS_MASTER && !killer.HasTitle(TITLE_MASTER)) {
+        killer.SetLifetimeKills(KILLS_MASTER);
+        killer.SetKnownTitle(TITLE_MASTER);
+        killer.AddItem(BONUS_ITEM_ENTRY, 1);
+        killer.SendBroadcastMessage("You have earned the title of PvP Master!");
+    } else if (lifetimeKills >= KILLS_EXPERT && !killer.HasTitle(TITLE_EXPERT)) {
+        killer.SetLifetimeKills(KILLS_EXPERT);
+        killer.SetKnownTitle(TITLE_EXPERT);
+        killer.AddItem(BONUS_ITEM_ENTRY, 1);
+        killer.SendBroadcastMessage("You have earned the title of PvP Expert!");
+    } else if (lifetimeKills >= KILLS_ADEPT && !killer.HasTitle(TITLE_ADEPT)) {
+        killer.SetLifetimeKills(KILLS_ADEPT);
+        killer.SetKnownTitle(TITLE_ADEPT);
+        killer.AddItem(BONUS_ITEM_ENTRY, 1);
+        killer.SendBroadcastMessage("You have earned the title of PvP Adept!");
+    } else if (lifetimeKills >= KILLS_NOVICE && !killer.HasTitle(TITLE_NOVICE)) {
+        killer.SetLifetimeKills(KILLS_NOVICE);
+        killer.SetKnownTitle(TITLE_NOVICE);
+        killer.AddItem(BONUS_ITEM_ENTRY, 1);
+        killer.SendBroadcastMessage("You have earned the title of PvP Novice!");
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_KILL_PLAYER, (...args) => CheckPvPProgress(...args));
+```
+
+In this script, we define constants for the number of kills required for each title and the corresponding title IDs. When a player kills another player, we check their lifetime honorable kills and grant them the appropriate title and bonus item if they've reached a new milestone. We use `SetLifetimeKills()` to ensure that their kill count is set to the exact milestone value.
+
+## SetPlayerLock
+This method allows you to lock or unlock the player's controls, preventing or allowing movement and casting.
+
+### Parameters
+- `apply`: boolean (optional) - If set to `true`, the player will be locked. If set to `false`, the player will be unlocked. If not provided, the default value is `true`.
+
+### Example Usage
+Here's an example of how to use `SetPlayerLock` in a script that freezes the player in place for a certain duration when they enter a specific area:
+
+```typescript
+const AREA_ID = 1234; // Replace with the desired area ID
+const LOCK_DURATION = 5000; // Lock duration in milliseconds (5 seconds)
+
+const OnAreaTrigger: player_event_on_area_trigger = (event: number, player: Player, areaId: number) => {
+    if (areaId === AREA_ID) {
+        // Lock the player controls
+        player.SetPlayerLock(true);
+
+        // Send a message to the player
+        player.SendBroadcastMessage("You have been frozen in place!");
+
+        // Set a timer to unlock the player after the specified duration
+        let timerId = 0;
+        timerId = CreateTimer(LOCK_DURATION, () => {
+            // Unlock the player controls
+            player.SetPlayerLock(false);
+
+            // Send a message to the player
+            player.SendBroadcastMessage("You are now free to move!");
+
+            // Despawn the timer
+            DestroyTimer(timerId);
+        });
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_AREA_TRIGGER, (...args) => OnAreaTrigger(...args));
+```
+
+In this example:
+1. When the player enters a specific area (identified by `AREA_ID`), the `OnAreaTrigger` event is triggered.
+2. Inside the event handler, we check if the triggered area ID matches the desired area ID.
+3. If it matches, we lock the player's controls using `SetPlayerLock(true)`.
+4. We send a message to the player indicating that they have been frozen in place.
+5. We create a timer using `CreateTimer` that will unlock the player after a specified duration (`LOCK_DURATION`).
+6. Inside the timer callback, we unlock the player's controls using `SetPlayerLock(false)`.
+7. We send a message to the player indicating that they are now free to move.
+8. Finally, we destroy the timer using `DestroyTimer` to prevent memory leaks.
+
+This script demonstrates how to use `SetPlayerLock` to temporarily restrict the player's movement and casting abilities when they enter a specific area, and then unlock them after a certain duration.
+
+Remember to replace `AREA_ID` with the actual area ID you want to trigger the lock, and adjust the `LOCK_DURATION` to the desired duration in milliseconds.
+
+## SetPvPDeath
+This method allows you to toggle PvP death for a player. When PvP death is enabled, the player will lose durability and drop items on death during PvP combat. If PvP death is disabled, the player will not suffer these penalties.
+
+### Parameters
+* on: boolean (optional) - Determines whether to enable or disable PvP death. If not provided, the method will toggle the current state.
+
+### Example Usage
+In this example, we will create a custom PvP event where players can opt-in to participate. If they choose to participate, PvP death will be enabled for them, increasing the risk and reward of the event.
+
+```typescript
+// Event constants
+const EVENT_AREA_ID = 1234; // The area ID where the event takes place
+const EVENT_DURATION = 3600; // Event duration in seconds (1 hour)
+const EVENT_MIN_LEVEL = 60; // Minimum level required to participate
+
+// Event state
+let eventActive = false;
+let eventParticipants: Player[] = [];
+
+// Event start function
+function startPvPEvent() {
+    eventActive = true;
+    SendWorldMessage("The PvP event has begun! Players can now opt-in to participate.");
+    CreateLuaEvent(() => {
+        endPvPEvent();
+    }, EVENT_DURATION * 1000, 1);
+}
+
+// Event end function
+function endPvPEvent() {
+    eventActive = false;
+    SendWorldMessage("The PvP event has ended. Thank you for participating!");
+    for (const participant of eventParticipants) {
+        participant.SetPvPDeath(false);
+    }
+    eventParticipants = [];
+}
+
+// Player login event
+const OnLogin: player_event_on_login = (event: number, player: Player) => {
+    if (eventActive && player.GetLevel() >= EVENT_MIN_LEVEL) {
+        player.SendBroadcastMessage("A PvP event is currently active! Type '.joinevent' to participate.");
+    }
+};
+
+// Player chat event
+const OnChat: player_event_on_chat = (event: number, player: Player, msg: string, Type: number, lang: number) => {
+    if (msg === ".joinevent" && eventActive) {
+        if (player.GetLevel() < EVENT_MIN_LEVEL) {
+            player.SendBroadcastMessage(`You must be at least level ${EVENT_MIN_LEVEL} to participate in the PvP event.`);
+            return;
+        }
+
+        if (player.GetAreaId() !== EVENT_AREA_ID) {
+            player.SendBroadcastMessage(`You must be in the event area to join the PvP event.`);
+            return;
+        }
+
+        player.SetPvPDeath(true);
+        eventParticipants.push(player);
+        player.SendBroadcastMessage("You have joined the PvP event! PvP death is now enabled for you.");
+    }
+};
+
+// Register events
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => OnLogin(...args));
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_CHAT, (...args) => OnChat(...args));
+
+// Start the event
+startPvPEvent();
+```
+
+In this example, players can join the PvP event by typing ".joinevent" in the chat while they are in the designated event area and meet the minimum level requirement. When they join, PvP death is enabled for them using the `SetPvPDeath` method. At the end of the event, PvP death is disabled for all participants.
+
+## SetQuestStatus
+Sets the state of a quest for the player. The quest state determines the player's progress and completion status for a specific quest.
+
+### Parameters
+* entry: number - The ID of the quest to set the status for. Quest IDs can be found in the `quest_template` table in the world database.
+* status: number - The status to set for the quest. Valid status values are:
+  - 0 - QUEST_STATUS_NONE
+  - 1 - QUEST_STATUS_COMPLETE
+  - 2 - QUEST_STATUS_UNAVAILABLE
+  - 3 - QUEST_STATUS_INCOMPLETE
+  - 4 - QUEST_STATUS_AVAILABLE
+  - 5 - QUEST_STATUS_FAILED
+
+### Example Usage
+In this example, we'll create a script that allows players to reset a daily quest by talking to an NPC. The script will check if the player has already completed the quest for the day and reset it if necessary.
+
+```typescript
+const DAILY_QUEST_ENTRY = 12345;
+const QUEST_RESET_NPC_ENTRY = 54321;
+
+const OnGossipHello: on_gossip_event = (event: number, player: Player, object: WorldObject) => {
+    if (object.GetEntry() === QUEST_RESET_NPC_ENTRY) {
+        if (player.GetQuestStatus(DAILY_QUEST_ENTRY) === QuestStatus.QUEST_STATUS_COMPLETE) {
+            player.SetQuestStatus(DAILY_QUEST_ENTRY, QuestStatus.QUEST_STATUS_NONE);
+            player.SendBroadcastMessage("Your daily quest has been reset. You can now accept it again!");
+        } else {
+            player.SendBroadcastMessage("You have not completed the daily quest yet. Come back after you've finished it!");
+        }
+        
+        player.GossipComplete();
+    }
+};
+
+RegisterServerEvent(ServerEvents.EVENT_ON_GOSSIP_HELLO, (...args) => OnGossipHello(...args));
+```
+
+In this script:
+1. We define constants for the daily quest entry and the NPC entry that will reset the quest.
+2. We register a server event for `EVENT_ON_GOSSIP_HELLO`, which triggers when a player interacts with an NPC.
+3. Inside the event handler, we check if the interacted object's entry matches the quest reset NPC entry.
+4. If the player has already completed the daily quest (status is `QUEST_STATUS_COMPLETE`), we use `SetQuestStatus` to reset the quest status to `QUEST_STATUS_NONE`, effectively allowing the player to accept and complete the quest again.
+5. We send a broadcast message to the player informing them that the quest has been reset or that they need to complete it first.
+6. Finally, we call `GossipComplete` to close the gossip window.
+
+This script provides a convenient way for players to reset a daily quest by interacting with a specific NPC, saving them time and effort in case they need to repeat the quest.
+
+## SetRankPoints
+This method sets the rank points for the player in the PvP ranking system. Rank points are used to determine the player's PvP rank and can be earned through various PvP activities such as battlegrounds and arenas.
+
+### Parameters
+- `rankPoints`: number - The amount of rank points to set for the player.
+
+### Example Usage
+Here's an example of how to use the `SetRankPoints` method to implement a custom PvP reward system:
+
+```typescript
+const PVP_KILL_RP_REWARD = 10; // Reward 10 rank points per PvP kill
+const RP_THRESHOLD_RANK_1 = 100; // Threshold for reaching rank 1
+const RP_THRESHOLD_RANK_2 = 500; // Threshold for reaching rank 2
+const RP_THRESHOLD_RANK_3 = 1000; // Threshold for reaching rank 3
+
+const OnPvPKill: player_event_On_Kill_Player = (event: number, killer: Player, killed: Player) => {
+    const currentRP = killer.GetRankPoints();
+    killer.SetRankPoints(currentRP + PVP_KILL_RP_REWARD);
+
+    const newRP = killer.GetRankPoints();
+    if (newRP >= RP_THRESHOLD_RANK_3 && currentRP < RP_THRESHOLD_RANK_3) {
+        // Player reached rank 3
+        killer.SendBroadcastMessage("Congratulations! You have reached PvP Rank 3!");
+        killer.AddItem(RANK_3_REWARD_ITEM, 1); // Reward for reaching rank 3
+    } else if (newRP >= RP_THRESHOLD_RANK_2 && currentRP < RP_THRESHOLD_RANK_2) {
+        // Player reached rank 2
+        killer.SendBroadcastMessage("Congratulations! You have reached PvP Rank 2!");
+        killer.AddItem(RANK_2_REWARD_ITEM, 1); // Reward for reaching rank 2
+    } else if (newRP >= RP_THRESHOLD_RANK_1 && currentRP < RP_THRESHOLD_RANK_1) {
+        // Player reached rank 1
+        killer.SendBroadcastMessage("Congratulations! You have reached PvP Rank 1!");
+        killer.AddItem(RANK_1_REWARD_ITEM, 1); // Reward for reaching rank 1
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_KILL_PLAYER, (...args) => OnPvPKill(...args));
+```
+
+In this example:
+1. We define constants for the rank point reward per PvP kill and the rank point thresholds for reaching different PvP ranks.
+2. In the `OnPvPKill` event handler, we retrieve the current rank points of the killer player using `GetRankPoints()`.
+3. We call `SetRankPoints()` to add the PvP kill reward to the player's current rank points.
+4. We check if the player has reached a new PvP rank based on the updated rank points.
+5. If the player reaches a new rank, we send a congratulatory message using `SendBroadcastMessage()` and reward them with a specific item using `AddItem()`.
+
+This script demonstrates how the `SetRankPoints` method can be used in combination with other methods to create a custom PvP ranking and reward system on an Azerothcore server with the mod-eluna platform.
+
+## SetReputation
+Sets the player's reputation amount for the specified faction. The reputation value is an integer value that represents the player's standing with the faction. Reputation values can be negative or positive, with higher positive values indicating a better standing with the faction.
+
+### Parameters
+* factionId: number - The ID of the faction to set the reputation for. Faction IDs can be found in the `Faction` table in the world database.
+* reputationValue: number - The reputation value to set for the specified faction. This value can be negative or positive.
+
+### Example Usage
+Example script to set a player's reputation with the Argent Dawn faction based on their level when they kill a specific creature.
+
+```typescript
+const CREATURE_ENTRY = 1234; // Replace with the actual creature entry ID
+const ARGENT_DAWN_FACTION_ID = 529; // Argent Dawn faction ID
+
+const onCreatureKill: creature_event_on_creature_kill = (event: number, creature: Creature, killer: Unit) => {
+    if (creature.GetEntry() === CREATURE_ENTRY && killer instanceof Player) {
+        const player = killer as Player;
+        const playerLevel = player.GetLevel();
+
+        let reputationValue = 0;
+        if (playerLevel >= 60) {
+            reputationValue = 2500; // Exalted
+        } else if (playerLevel >= 50) {
+            reputationValue = 1500; // Revered
+        } else if (playerLevel >= 40) {
+            reputationValue = 500; // Honored
+        } else if (playerLevel >= 30) {
+            reputationValue = 100; // Friendly
+        } else {
+            reputationValue = 0; // Neutral
+        }
+
+        const currentReputation = player.GetReputation(ARGENT_DAWN_FACTION_ID);
+        const newReputation = currentReputation + reputationValue;
+
+        player.SetReputation(ARGENT_DAWN_FACTION_ID, newReputation);
+        player.SendBroadcastMessage(`Your reputation with the Argent Dawn has increased by ${reputationValue}!`);
+    }
+};
+
+RegisterCreatureEvent(CREATURE_ENTRY, CreatureEvents.CREATURE_EVENT_ON_CREATURE_KILL, onCreatureKill);
+```
+
+In this example:
+1. We define the creature entry ID and the Argent Dawn faction ID as constants.
+2. We register a creature event handler for the `CREATURE_EVENT_ON_CREATURE_KILL` event.
+3. When the specified creature is killed by a player, we determine the reputation value to be added based on the player's level.
+4. We retrieve the player's current reputation with the Argent Dawn faction using `player.GetReputation()`.
+5. We calculate the new reputation value by adding the determined reputation value to the current reputation.
+6. We set the player's reputation with the Argent Dawn faction to the new value using `player.SetReputation()`.
+7. We send a broadcast message to the player informing them of the reputation increase.
+
+This script demonstrates how to use the `SetReputation()` method to modify a player's reputation with a specific faction based on certain conditions, such as the player's level and the creature they have killed.
+
+## SetRestBonus
+This method sets the player's rest bonus to the specified amount. The rest bonus is a mechanic in World of Warcraft that allows players to accumulate extra experience points while logged out in an inn or a city. When the player logs back in, they receive a percentage of bonus experience based on their rest bonus amount. 
+
+### Parameters
+* restBonus: number - The amount of rest bonus to set for the player. This value is represented as a percentage, where 100 means 100% rest bonus.
+
+### Example Usage
+Here's an example of how to use the `SetRestBonus` method to grant players a rest bonus based on their level and the time they spent offline:
+
+```typescript
+const MINUTE = 60;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+const GrantRestBonus: player_event_on_login = (event: number, player: Player) => {
+    const timeOffline = player.GetTotalPlayedTime() - player.GetLevelPlayedTime();
+    const level = player.GetLevel();
+    let restBonus = 0;
+
+    if (level < 60) {
+        restBonus = (timeOffline / (8 * HOUR)) * 100;
+    } else if (level < 70) {
+        restBonus = (timeOffline / (12 * HOUR)) * 100;
+    } else {
+        restBonus = (timeOffline / DAY) * 100;
+    }
+
+    // Clamp the rest bonus between 0 and 150
+    restBonus = Math.max(0, Math.min(restBonus, 150));
+
+    player.SetRestBonus(restBonus);
+
+    // Notify the player about their rest bonus
+    player.SendBroadcastMessage(`Welcome back! You have accumulated ${restBonus.toFixed(2)}% rest bonus while offline.`);
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, GrantRestBonus);
+```
+
+In this example, we calculate the rest bonus based on the player's time spent offline and their level. Lower level players accumulate rest bonus faster than higher level players. We use different formulas to calculate the rest bonus for players below level 60, between level 60 and 70, and above level 70.
+
+We then clamp the rest bonus value between 0 and 150 to ensure it stays within the valid range. Finally, we call the `SetRestBonus` method to set the player's rest bonus and send them a message informing them about their accumulated rest bonus.
+
+This script showcases how you can use the `SetRestBonus` method in combination with other player-related methods and events to create a more immersive and rewarding experience for players who take breaks from the game.
+
+## SetSheath
+Sets the sheathe state of the player's equipped weapons. The sheathe state determines whether the weapons are visibly carried on the player's character model.
+
+### Parameters
+* sheatheState: number - The desired sheathe state. Valid values are:
+  * 0 - No sheathe state (weapons are not visible)
+  * 1 - Melee sheathe state (melee weapons are visible)
+  * 2 - Ranged sheathe state (ranged weapons are visible)
+
+### Example Usage
+This example demonstrates how to set the player's sheathe state based on their class and the weapons they have equipped.
+
+```typescript
+const SHEATHE_STATE_NONE = 0;
+const SHEATHE_STATE_MELEE = 1;
+const SHEATHE_STATE_RANGED = 2;
+
+const UpdateSheatheState: player_event_on_equip = (event: number, player: Player, item: Item, bag: number, slot: number) => {
+    const classId = player.GetClass();
+    const hasRangedWeapon = player.HasRangedWeapon();
+    const hasMeleeWeapon = player.HasMeleeWeapon();
+
+    let sheatheState = SHEATHE_STATE_NONE;
+
+    if (classId === Classes.CLASS_HUNTER && hasRangedWeapon) {
+        sheatheState = SHEATHE_STATE_RANGED;
+    } else if (hasMeleeWeapon) {
+        sheatheState = SHEATHE_STATE_MELEE;
+    }
+
+    player.SetSheath(sheatheState);
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_EQUIP, (...args) => UpdateSheatheState(...args));
+```
+
+In this example, we define constants for the different sheathe states: `SHEATHE_STATE_NONE`, `SHEATHE_STATE_MELEE`, and `SHEATHE_STATE_RANGED`.
+
+We register a player event handler for the `PLAYER_EVENT_ON_EQUIP` event, which is triggered whenever a player equips an item. Inside the event handler, we retrieve the player's class using `player.GetClass()` and check if the player has a ranged weapon or a melee weapon equipped using `player.HasRangedWeapon()` and `player.HasMeleeWeapon()`, respectively.
+
+Based on the player's class and equipped weapons, we determine the appropriate sheathe state. If the player is a hunter and has a ranged weapon equipped, we set the sheathe state to `SHEATHE_STATE_RANGED`. Otherwise, if the player has a melee weapon equipped, we set the sheathe state to `SHEATHE_STATE_MELEE`. If neither condition is met, the sheathe state remains as `SHEATHE_STATE_NONE`.
+
+Finally, we call `player.SetSheath(sheatheState)` to set the player's sheathe state to the determined value.
+
+This script ensures that the player's sheathe state is automatically updated whenever they equip or unequip weapons, providing a visually accurate representation of their equipped weapons on their character model.
+
+## SetSkill
+This method allows you to set or increase a specific skill for the player. You can specify the skill ID, the amount to increase the skill by, the current value of the skill, and the maximum value of the skill.
+
+### Parameters
+* id: number - The ID of the skill to set or increase. Skill IDs can be found in the `SkillLine.dbc` file.
+* step: number - The amount to increase the skill by.
+* currVal: number - The current value of the skill.
+* maxVal: number - The maximum value of the skill.
+
+### Example Usage
+Here's an example of how to use the `SetSkill` method to increase a player's mining skill when they successfully mine a ore node:
+
+```typescript
+const MINING_SKILL_ID = 186;
+const COPPER_ORE_ENTRY = 2770;
+const COPPER_ORE_SKILL_STEP = 1;
+
+const OnOpenGo: player_event_on_go_use = (event: number, player: Player, gameobject: GameObject) => {
+    const goEntry = gameobject.GetEntry();
+
+    if (goEntry === COPPER_ORE_ENTRY) {
+        const miningSkill = player.GetSkillValue(MINING_SKILL_ID);
+        const maxSkillLevel = player.GetMaxSkillValue(MINING_SKILL_ID);
+
+        if (miningSkill < maxSkillLevel) {
+            player.SetSkill(MINING_SKILL_ID, COPPER_ORE_SKILL_STEP, miningSkill, maxSkillLevel);
+            player.SendBroadcastMessage("Your mining skill has increased!");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_GO_USE, (...args) => OnOpenGo(...args));
+```
+
+In this example:
+1. We define constants for the mining skill ID, copper ore entry ID, and the amount to increase the skill by when mining copper ore.
+2. We register the `PLAYER_EVENT_ON_GO_USE` event to trigger the `OnOpenGo` function whenever a player uses a game object.
+3. Inside the `OnOpenGo` function, we check if the game object entry matches the copper ore entry.
+4. If it does, we get the player's current mining skill value and maximum skill value using the `GetSkillValue` and `GetMaxSkillValue` methods.
+5. If the current skill value is less than the maximum skill value, we use the `SetSkill` method to increase the mining skill by the specified step amount.
+6. Finally, we send a broadcast message to the player informing them that their mining skill has increased.
+
+This script ensures that the player's mining skill increases gradually as they mine copper ore nodes, until they reach the maximum skill level for mining.
+
+Note: Make sure to replace the skill ID, ore entry, and skill step values with the appropriate values for your server and the specific skill you want to increase.
+
+## SetTaxiCheat
+Toggles whether the player has taxi cheat enabled or not. When taxi cheat is enabled, the player can instantly teleport to any taxi node without the need to discover it first or pay for the travel cost.
+
+### Parameters
+* taxiCheat?: boolean - (Optional) Set to `true` to enable taxi cheat, `false` to disable it. If not provided, it will toggle the current state.
+
+### Example Usage
+In this example, we create a command `.taxicheat` that allows players to toggle their taxi cheat status. We also store the player's original taxi cheat state in a table to restore it when they log out.
+
+```typescript
+const playerTaxiCheatState: { [playerGuid: number]: boolean } = {};
+
+const onCommand: player_event_on_command = (event: PlayerEvents.PLAYER_EVENT_ON_COMMAND, player: Player, command: string, args: string[]): void => {
+    if (command === 'taxicheat') {
+        const currentState = player.GetTaxiCheat();
+        player.SetTaxiCheat(!currentState);
+
+        if (currentState) {
+            player.SendBroadcastMessage('Taxi cheat disabled.');
+        } else {
+            player.SendBroadcastMessage('Taxi cheat enabled.');
+        }
+
+        playerTaxiCheatState[player.GetGUIDLow()] = !currentState;
+    }
+};
+
+const onLogin: player_event_on_login = (event: PlayerEvents.PLAYER_EVENT_ON_LOGIN, player: Player): void => {
+    const playerGuid = player.GetGUIDLow();
+    if (playerGuid in playerTaxiCheatState) {
+        const taxiCheatState = playerTaxiCheatState[playerGuid];
+        player.SetTaxiCheat(taxiCheatState);
+
+        if (taxiCheatState) {
+            player.SendBroadcastMessage('Taxi cheat is currently enabled for your character.');
+        }
+    }
+};
+
+const onLogout: player_event_on_logout = (event: PlayerEvents.PLAYER_EVENT_ON_LOGOUT, player: Player): void => {
+    const playerGuid = player.GetGUIDLow();
+    delete playerTaxiCheatState[playerGuid];
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_COMMAND, (...args) => onCommand(...args));
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => onLogin(...args));
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGOUT, (...args) => onLogout(...args));
+```
+
+In this script:
+1. We define an object `playerTaxiCheatState` to store the taxi cheat state for each player using their GUID as the key.
+2. In the `onCommand` event, we check if the player used the `.taxicheat` command. If so, we toggle their taxi cheat state using `SetTaxiCheat()`, send them a message indicating the current state, and store the updated state in `playerTaxiCheatState`.
+3. In the `onLogin` event, we check if the player's GUID exists in `playerTaxiCheatState`. If it does, we set their taxi cheat state to the stored value and send them a message if taxi cheat is enabled.
+4. In the `onLogout` event, we remove the player's entry from `playerTaxiCheatState` to avoid storing unnecessary data.
+
+This script allows players to use the `.taxicheat` command to toggle their taxi cheat status, which persists across logouts. The script also informs players about their current taxi cheat state when they log in.
+
+## SpawnBones
+This method will convert the player's corpse into bones. This can be useful for quickly removing a player's corpse from the game world or for creating custom death mechanics.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+This method does not return any values.
+
+### Example Usage
+In this example, we will create a custom death system where players who die in a specific area will have their corpses automatically converted to bones after 5 minutes. This can be used to create a sense of urgency for players to recover their corpses in dangerous areas.
+
+```typescript
+const CUSTOM_AREA_ID = 1234;
+const CORPSE_DESPAWN_DELAY = 5 * MINUTE * IN_MILLISECONDS;
+
+const OnPlayerDeath: player_event_on_death = (event: number, player: Player, killer: Unit) => {
+    if (player.GetAreaId() === CUSTOM_AREA_ID) {
+        player.CreateCorpse();
+        
+        // Schedule the corpse to be converted to bones after the specified delay
+        player.RegisterTimedEvent(CORPSE_DESPAWN_DELAY, (eventId: number, delay: number, repeats: number, player: Player) => {
+            const corpse = player.GetCorpse();
+            if (corpse) {
+                corpse.SetCorpseType(CorpseType.CORPSE_BONES);
+                corpse.DeleteBonesFromWorld();
+            }
+        }, CORPSE_DESPAWN_DELAY);
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_DEATH, (...args) => OnPlayerDeath(...args));
+```
+
+In this script:
+1. We define a constant `CUSTOM_AREA_ID` to represent the area ID where we want to apply our custom death mechanics.
+2. We define a constant `CORPSE_DESPAWN_DELAY` to specify the delay (in milliseconds) before the corpse is converted to bones.
+3. In the `OnPlayerDeath` event handler, we check if the player died in the specified area using `player.GetAreaId()`.
+4. If the player died in the custom area, we create a corpse for the player using `player.CreateCorpse()`.
+5. We then schedule a timed event using `player.RegisterTimedEvent()` to be executed after the specified delay.
+6. In the timed event callback, we retrieve the player's corpse using `player.GetCorpse()`.
+7. If the corpse exists, we convert it to bones using `corpse.SetCorpseType(CorpseType.CORPSE_BONES)`.
+8. Finally, we remove the bones from the world using `corpse.DeleteBonesFromWorld()`.
+
+This script showcases how the `SpawnBones()` method can be used in combination with other methods and events to create a custom death system in specific areas of the game world.
+
+Remember to register the event handler using `RegisterPlayerEvent()` with the appropriate event type (`PlayerEvents.PLAYER_EVENT_ON_DEATH` in this case) to ensure that the script is executed when a player dies.
+
+## StartTaxi
+This method attempts to start a taxi or flying mount travel for the player to the specified path. The pathId corresponds to the path entry in the DBC files. If the player does not meet the requirements for the taxi path, such as not having the necessary flight points discovered or not being at a flight master, the method will fail silently.
+
+### Parameters
+- pathId: number - The ID of the taxi path to start. You can find these IDs in the DBC files or by consulting the TaxiPath.dbc file.
+
+### Example Usage
+Here's an example of how to use the StartTaxi method to send a player on a taxi ride when they interact with a specific game object:
+
+```typescript
+const OBJECT_ENTRY = 12345; // Replace with the actual game object entry ID
+const TAXI_PATH_ID = 678; // Replace with the actual taxi path ID
+
+const OnGameObjectUse: gameobject_scripts = (go: GameObject, player: Player) => {
+    if (go.GetEntry() === OBJECT_ENTRY) {
+        // Check if the player is eligible for the taxi ride
+        if (player.GetTeam() === TeamId.TEAM_HORDE && player.GetReputationRank(942) >= ReputationRank.REVERED) {
+            // Horde players need to be Revered with the Cenarion Expedition (faction ID 942)
+            player.StartTaxi(TAXI_PATH_ID);
+        } else if (player.GetTeam() === TeamId.TEAM_ALLIANCE && player.GetQuestRewardStatus(12345)) {
+            // Alliance players need to have completed a specific quest (replace 12345 with the actual quest ID)
+            player.StartTaxi(TAXI_PATH_ID);
+        } else {
+            // Player does not meet the requirements
+            player.SendBroadcastMessage("You do not meet the requirements to use this taxi service.");
+        }
+    }
+};
+
+RegisterGameObjectEvent(OBJECT_ENTRY, GameObjectEvents.GAMEOBJECT_EVENT_ON_USE, OnGameObjectUse);
+```
+
+In this example:
+1. We define the entry ID of the game object that will trigger the taxi ride (replace `OBJECT_ENTRY` with the actual entry ID).
+2. We specify the taxi path ID that the player will be sent on (replace `TAXI_PATH_ID` with the actual path ID).
+3. In the `OnGameObjectUse` event handler, we check if the interacted game object matches the desired entry ID.
+4. We then check if the player meets the requirements for the taxi ride based on their team and other conditions.
+   - For Horde players, we check if they have reached the Revered reputation rank with the Cenarion Expedition faction.
+   - For Alliance players, we check if they have completed a specific quest (replace `12345` with the actual quest ID).
+5. If the player meets the requirements, we call `player.StartTaxi(TAXI_PATH_ID)` to send them on the taxi ride.
+6. If the player does not meet the requirements, we send them a broadcast message informing them that they cannot use the taxi service.
+7. Finally, we register the `OnGameObjectUse` event handler for the specific game object entry using `RegisterGameObjectEvent`.
+
+Make sure to replace `OBJECT_ENTRY`, `TAXI_PATH_ID`, and any other placeholder values with the actual entry IDs and path IDs relevant to your scenario.
+
+## SummonPlayer
+Sends a summon request to the player from the given summoner. This can be used to request the player to join a group, raid, or to teleport to the summoner's location. The player must accept the summon request to complete the summon.
+
+### Parameters
+- summoner: [Unit](./unit.md) - The unit that is summoning the player.
+
+### Example Usage
+Here's an example of how to use the `SummonPlayer` method to summon a player to a raid boss encounter when they enter the raid dungeon:
+
+```typescript
+const RAID_DUNGEON_MAP_ID = 532;
+const RAID_BOSS_CREATURE_ENTRY = 24723;
+
+const OnPlayerEnterWorld: player_event_on_login = (event: number, player: Player) => {
+    const map = player.GetMap();
+
+    if (map && map.GetMapId() === RAID_DUNGEON_MAP_ID) {
+        const creatures = map.GetCreaturesInRange(player.GetX(), player.GetY(), player.GetZ(), 100);
+        
+        for (const creature of creatures) {
+            if (creature.GetEntry() === RAID_BOSS_CREATURE_ENTRY) {
+                const raidBoss = creature as Unit;
+                
+                // Check if the player is already in a raid group
+                if (!player.IsInRaid()) {
+                    // Create a new raid group and add the player to it
+                    const raidGroup = player.GetMap().CreateRaid(player);
+                    player.AddToRaid(raidGroup);
+                }
+                
+                // Send a summon request to the player from the raid boss
+                raidBoss.SummonPlayer(player);
+                
+                // Announce the summon request to the player
+                player.SendBroadcastMessage(`You have been summoned by ${raidBoss.GetName()} to join the raid!`);
+                
+                break;
+            }
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => OnPlayerEnterWorld(...args));
+```
+
+In this example, when a player enters a specific raid dungeon (identified by the `RAID_DUNGEON_MAP_ID`), the script searches for a raid boss creature (identified by the `RAID_BOSS_CREATURE_ENTRY`) within a certain range of the player's location.
+
+If the raid boss is found and the player is not already in a raid group, the script creates a new raid group and adds the player to it. Then, it sends a summon request to the player from the raid boss using the `SummonPlayer` method.
+
+Finally, the script sends a broadcast message to the player informing them about the summon request from the raid boss.
+
+This example demonstrates how the `SummonPlayer` method can be used in combination with other methods and game events to create a more complex and interactive gameplay experience for the player.
+
+## TalkedToCreature
+This method is used to give credit to the player for talking to a creature as part of a quest requirement. It marks the specified creature as "talked to" for the player in the context of the quest.
+
+### Parameters
+* entry: number - The entry ID of the quest that requires talking to the creature.
+* creature: [Creature](./creature.md) - The creature object representing the NPC that the player talked to.
+
+### Example Usage
+In this example, we have a quest that requires the player to talk to a specific NPC to gather information. Once the player interacts with the NPC, the `TalkedToCreature` method is called to give the player credit for talking to the creature.
+
+```typescript
+const QUEST_ENTRY = 1234;
+const NPC_ENTRY = 5678;
+
+const OnGossipHello: player_event_on_gossip_hello = (event: number, player: Player, creature: Creature) => {
+    if (creature.GetEntry() === NPC_ENTRY) {
+        if (player.HasQuest(QUEST_ENTRY)) {
+            player.TalkedToCreature(QUEST_ENTRY, creature);
+            creature.SendUnitWhisper("Thank you for taking the time to talk to me. I have marked your quest as complete.", 0, player);
+            player.CompleteQuest(QUEST_ENTRY);
+        } else {
+            creature.SendUnitWhisper("Hello there! I have some important information, but it seems you don't have the right quest yet.", 0, player);
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_GOSSIP_HELLO, (...args) => OnGossipHello(...args));
+```
+
+In this script:
+1. We define constants for the quest entry and the NPC entry for clarity and maintainability.
+2. We register the `PLAYER_EVENT_ON_GOSSIP_HELLO` event to trigger the script when the player interacts with an NPC.
+3. Inside the event handler, we check if the interacted creature matches the desired NPC entry.
+4. If the player has the specific quest, we call `TalkedToCreature` to give credit for talking to the creature.
+5. We send a whisper message to the player indicating that the quest has been marked as complete.
+6. We call `CompleteQuest` to mark the quest as completed for the player.
+7. If the player doesn't have the quest, we send a different whisper message indicating that they don't have the right quest yet.
+
+This script ensures that the player receives credit for talking to the specific NPC only if they have the corresponding quest. It provides a more immersive experience by sending appropriate whisper messages based on the player's quest status.
+
+Note: Make sure to replace `QUEST_ENTRY` and `NPC_ENTRY` with the actual entry IDs from your database for the specific quest and NPC involved in the script.
+
+## Teleport
+Instantly moves the player to the specified location on the given map.
+
+### Parameters
+* mapId: number - The ID of the map to teleport the player to. Map IDs can be found in the `Map.dbc` file.
+* xCoord: number - The x-coordinate of the destination on the specified map.
+* yCoord: number - The y-coordinate of the destination on the specified map.
+* zCoord: number - The z-coordinate (height) of the destination on the specified map.
+* orientation: number - The orientation (facing direction) of the player at the destination, in radians.
+
+### Example Usage
+Teleport the player to the top of Stormwind's Wizard's Sanctum when they use the `.tele` command:
+
+```typescript
+const WIZARD_SANCTUM_MAP = 0; // Eastern Kingdoms
+const WIZARD_SANCTUM_X = -9015.8;
+const WIZARD_SANCTUM_Y = 874.7;
+const WIZARD_SANCTUM_Z = 148.6;
+const WIZARD_SANCTUM_O = 3.5;
+
+const onChatMessage: player_event_on_chat = (event: number, player: Player, msg: string, Type: ChatMsg, lang: Language): void => {
+    if (msg === '.tele') {
+        player.Teleport(WIZARD_SANCTUM_MAP, WIZARD_SANCTUM_X, WIZARD_SANCTUM_Y, WIZARD_SANCTUM_Z, WIZARD_SANCTUM_O);
+        player.SendBroadcastMessage('You have been teleported to the Wizard\'s Sanctum.');
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_CHAT, (...args) => onChatMessage(...args));
+```
+
+Create a teleportation matrix for GMs to quickly move between major cities:
+
+```typescript
+const CITY_TELEPORT_LOCATIONS = [
+    { name: 'Stormwind', map: 0, x: -8842.1, y: 626.4, z: 94.1, o: 3.6 },
+    { name: 'Ironforge', map: 0, x: -4918.9, y: -940.4, z: 501.6, o: 5.4 },
+    { name: 'Darnassus', map: 1, x: 9947.5, y: 2482.7, z: 1316.2, o: 0 },
+    { name: 'Exodar', map: 530, x: -3965.7, y: -11653.6, z: -138.8, o: 0.5 },
+    { name: 'Orgrimmar', map: 1, x: 1424.1, y: -4419.3, z: 25.1, o: 0.1 },
+    { name: 'Thunder Bluff', map: 1, x: -1282.3, y: 114.8, z: 131.3, o: 5.1 },
+    { name: 'Undercity', map: 0, x: 1586.5, y: 239.6, z: -52.1, o: 0.6 },
+    { name: 'Silvermoon', map: 530, x: 9487.7, y: -7279.3, z: 14.2, o: 0 },
+    { name: 'Shattrath', map: 530, x: -1838.2, y: 5301.8, z: -12.4, o: 5.9 },
+    { name: 'Dalaran', map: 571, x: 5804.1, y: 624.7, z: 647.8, o: 1.6 }
+];
+
+const onChatMessage: player_event_on_chat = (event: number, player: Player, msg: string, Type: ChatMsg, lang: Language): void => {
+    if (msg.startsWith('.tele ')) {
+        const cityName = msg.substring(6);
+        const city = CITY_TELEPORT_LOCATIONS.find(c => c.name.toLowerCase() === cityName.toLowerCase());
+
+        if (city) {
+            player.Teleport(city.map, city.x, city.y, city.z, city.o);
+            player.SendBroadcastMessage(`You have been teleported to ${city.name}.`);
+        } else {
+            player.SendBroadcastMessage(`Unknown city: ${cityName}. Valid cities are: ${CITY_TELEPORT_LOCATIONS.map(c => c.name).join(', ')}`);
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_CHAT, (...args) => onChatMessage(...args));
+```
+
+## TextEmote
+Send a text emote message from the player to nearby players in chat. This allows the player to express visible emotions or actions to other players.
+
+### Parameters
+* emoteText: string - The text to display as the emote message
+
+### Example Usage:
+Create a script to allow players to perform special emotes after killing a creature based on the creature's name.
+```typescript
+const MURLOC_EMOTE = "makes a gurgling sound.";
+const WOLF_EMOTE = "lets out a loud howl!"; 
+const DRAGON_EMOTE = "roars triumphantly!";
+
+const onCreatureKill: player_event_on_kill_creature = (event: number, player: Player, creature: Creature) => {
+    switch(creature.GetName()) {
+        case "Murloc":
+            player.TextEmote(MURLOC_EMOTE);
+            break;
+        case "Wolf":
+            player.TextEmote(WOLF_EMOTE);
+            break;
+        case "Dragon":
+            player.TextEmote(DRAGON_EMOTE);
+            creature.CastSpell(player, 10, true);
+            break;
+        default:
+            player.TextEmote("celebrates their victory!");
+            break; 
+    }
+    
+    const nearbyPlayers = player.GetPlayersInRange(10, true);
+    nearbyPlayers.forEach((nearbyPlayer: Player) => {
+        nearbyPlayer.SendBroadcastMessage(`${player.GetName()} has slain ${creature.GetName()}!`);
+    });
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_KILL_CREATURE, (...args) => onCreatureKill(...args));
+```
+In this example, when a player kills specific types of creatures, they will perform a special emote related to that creature. Additionally, nearby players within 10 yards will receive a broadcast message informing them of the player's victory over the slain creature. If the defeated creature is a dragon, it will also cast a spell on the player with ID 10.
+
+## ToggleAFK
+This method allows you to toggle the 'Away From Keyboard' (AFK) flag for the player. When a player is marked as AFK, their character will not be logged out due to inactivity and will display the 'Away' status.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+This method does not return any values.
+
+### Example Usage
+Here's an example of how to use the `ToggleAFK` method to automatically set a player's AFK status based on their current zone:
+
+```typescript
+const MAJOR_CITY_ZONES = [
+    1519, // Stormwind City
+    1537, // Ironforge
+    1637, // Orgrimmar
+    1638, // Thunder Bluff
+    1657, // Darnassus
+    3487, // Silvermoon City
+    3703, // Shattrath City
+    4395, // Dalaran
+];
+
+const HandlePlayerUpdateZone: player_event_on_update_zone = (event: number, player: Player, newZone: number, newArea: number) => {
+    const playerZoneId = player.GetZoneId();
+
+    if (MAJOR_CITY_ZONES.includes(playerZoneId)) {
+        // If the player is in a major city, mark them as AFK
+        if (!player.IsAFK()) {
+            player.ToggleAFK();
+            player.SendBroadcastMessage("You have been marked as Away because you are in a major city.");
+        }
+    } else {
+        // If the player is not in a major city, remove the AFK status
+        if (player.IsAFK()) {
+            player.ToggleAFK();
+            player.SendBroadcastMessage("Your Away status has been removed because you left a major city.");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_UPDATE_ZONE, (...args) => HandlePlayerUpdateZone(...args));
+```
+
+In this example, we define an array of zone IDs that correspond to major cities in the game. Whenever a player enters a new zone (`PLAYER_EVENT_ON_UPDATE_ZONE` event), we check if the new zone is a major city.
+
+If the player is in a major city and not already marked as AFK, we toggle their AFK status using `player.ToggleAFK()` and send them a message indicating why they were marked as AFK.
+
+If the player leaves a major city and their AFK status is currently set, we remove the AFK status using `player.ToggleAFK()` and send them a message notifying them of the change.
+
+This script demonstrates how you can use the `ToggleAFK` method in combination with other player methods and events to create a practical feature for your server.
+
+## ToggleDND
+This method allows you to toggle the 'Do Not Disturb' (DND) flag for the player. When the DND flag is enabled, the player will not receive any messages from other players, including whispers, guild messages, and channel messages. This can be useful for players who want to focus on their gameplay without being interrupted by chat messages.
+
+### Parameters
+This method does not take any parameters.
+
+### Returns
+This method does not return any value.
+
+### Example Usage
+Here's an example of how to use the `ToggleDND` method to create a command that allows players to toggle their DND status:
+
+```typescript
+const DND_COMMAND = "dnd";
+
+const HandleCommand: player_event_on_chat = (event: number, player: Player, msg: string, type: number, lang: number) => {
+    if (msg === DND_COMMAND) {
+        player.ToggleDND();
+
+        if (player.GetDNDStatus()) {
+            player.SendBroadcastMessage("Do Not Disturb mode enabled. You will not receive any messages from other players.");
+        } else {
+            player.SendBroadcastMessage("Do Not Disturb mode disabled. You will now receive messages from other players.");
+        }
+
+        return 0;
+    }
+
+    return 1;
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_CHAT, (...args) => HandleCommand(...args));
+```
+
+In this example, we define a constant `DND_COMMAND` that represents the command players can use to toggle their DND status. When a player types this command in the chat, the `HandleCommand` function is called.
+
+Inside the function, we first check if the entered message matches the `DND_COMMAND`. If it does, we call the `ToggleDND` method to toggle the player's DND status.
+
+After toggling the DND status, we use the `GetDNDStatus` method (assuming it exists) to check the current DND status of the player. If the DND status is enabled, we send a broadcast message to the player indicating that they will not receive any messages from other players. If the DND status is disabled, we send a broadcast message indicating that they will now receive messages from other players.
+
+Finally, we return 0 to indicate that the command has been handled and no further processing is needed. If the entered message does not match the `DND_COMMAND`, we return 1 to allow other command handlers to process the message.
+
+By registering the `HandleCommand` function with the `PLAYER_EVENT_ON_CHAT` event, this command will be triggered whenever a player sends a chat message.
+
+## UnbindAllInstances
+This method unbinds the player from all instances they are saved to, except the instance they are currently in. This can be useful for managing player saved instances, such as removing them from older instances they no longer need to be saved to.
+
+### Parameters
+None
+
+### Returns
+None
+
+### Example Usage
+This example script listens for the player login event, and if the player is level 80, it will unbind them from all heroic instances that are not Icecrown Citadel, since that is the latest level 80 heroic raid instance.
+
+```typescript
+const ICECROWN_CITADEL_MAP_ID = 631;
+
+const OnLogin: player_event_on_login = (event: number, player: Player) => {
+    if (player.GetLevel() == 80) {
+        const instanceIds = player.GetBoundInstances();
+        
+        instanceIds.forEach(id => {
+            const instance = player.GetInstance(id);
+            
+            // If the instance is a heroic difficulty, and not ICC
+            if (instance.Is25ManRaid() && instance.GetMapId() !== ICECROWN_CITADEL_MAP_ID) {
+                player.UnbindInstance(instance);
+            }
+        });
+        
+        // Unbind any remaining non-ICC instances
+        player.UnbindAllInstances();
+        
+        // Inform the player
+        player.SendBroadcastMessage("You have been unbound from all old heroic instances.");
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_LOGIN, (...args) => OnLogin(...args));
+```
+
+In this example:
+1. We listen for the `PLAYER_EVENT_ON_LOGIN` event.
+2. If the player is level 80, we get a list of their bound instance IDs using `player.GetBoundInstances()`.
+3. We loop through each instance ID, get the actual instance using `player.GetInstance(id)`, and check if it's a heroic 25-man raid (using `instance.Is25ManRaid()`) and not Icecrown Citadel (by checking the map ID).
+4. If the instance meets these criteria, we unbind the player from it using `player.UnbindInstance(instance)`.
+5. After the loop, we call `player.UnbindAllInstances()` to unbind the player from any remaining non-ICC instances (such as 10-man raids or non-heroic difficulties).
+6. Finally, we inform the player that they have been unbound from old instances using `player.SendBroadcastMessage()`.
+
+This script helps keep the player's saved instance list clean and relevant as they progress to newer content.
+
+## UnbindInstance
+Unbinds the player from all instances they are bound to except for the instance they are currently in. When a player enters an instance, they become bound to it, which means they cannot enter a new instance of the same map. This method allows unbinding the player from instances they are bound to, allowing them to enter new instances.
+
+### Parameters
+* map (optional): number - The ID of the map to unbind the player from. If not provided, the player will be unbound from all instances except the one they are currently in.
+* difficulty (optional): number - The difficulty of the instance to unbind the player from. This parameter is not used in WoW Classic.
+
+### Example Usage
+Unbind the player from all instances of a specific map when they leave a group:
+```typescript
+const GROUP_DISBANDED_EVENT = 1;
+const DEADMINES_MAP_ID = 36;
+
+const onGroupDisbanded: group_event_on_disband = (event: number, group: Group, player: Player) => {
+    const instanceSave = player.GetInstanceSave();
+
+    if (instanceSave) {
+        const mapId = instanceSave.GetMapId();
+
+        if (mapId === DEADMINES_MAP_ID) {
+            player.UnbindInstance(DEADMINES_MAP_ID);
+            player.SendBroadcastMessage("You have been unbound from the Deadmines instance.");
+        }
+    }
+};
+
+RegisterGroupEvent(GroupEvents.GROUP_EVENT_ON_DISBAND, (...args) => onGroupDisbanded(...args));
+```
+
+In this example, when a player's group is disbanded (event GROUP_EVENT_ON_DISBAND), the script checks if the player is saved to an instance. If the player is saved to an instance of the Deadmines (map ID 36), the script unbinds the player from that instance using the `UnbindInstance` method, allowing them to enter a new Deadmines instance. The player is then sent a broadcast message informing them that they have been unbound from the instance.
+
+This can be useful in situations where players want to reset an instance and start fresh, or if they need to join a different group to complete the instance. By unbinding the player from the instance, they can enter a new instance of the same map without any restrictions.
+
+Note that this script assumes the player is saved to a Deadmines instance. You can modify the script to handle other instances by checking for different map IDs and adjusting the broadcast message accordingly.
+
+## UnsetKnownTitle
+Removes a title by ID from the player's list of known titles. This can be useful for removing titles that are no longer available or for implementing custom title systems.
+
+### Parameters
+* titleId: number - The ID of the title to remove from the player's known titles.
+
+### Example Usage
+Suppose you want to create an event where players can lose titles based on certain conditions. In this example, we'll remove a title from a player if they die in a specific area.
+
+```typescript
+const AREA_ID = 1234; // Replace with the actual area ID
+const TITLE_ID = 5678; // Replace with the actual title ID
+
+const OnPlayerDeath: player_event_on_death = (event: number, player: Player, killer: WorldObject) => {
+    const playerMap = player.GetMapId();
+    const playerArea = player.GetAreaId();
+
+    if (playerMap === 0 && playerArea === AREA_ID) {
+        if (player.HasTitle(TITLE_ID)) {
+            player.UnsetKnownTitle(TITLE_ID);
+            player.SendBroadcastMessage("You have lost the title due to your defeat in this area.");
+        }
+    }
+};
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_DEATH, (...args) => OnPlayerDeath(...args));
+```
+
+In this script:
+1. We define the `AREA_ID` and `TITLE_ID` constants to represent the specific area and title we're interested in.
+2. We register the `PLAYER_EVENT_ON_DEATH` event to trigger our custom function `OnPlayerDeath` whenever a player dies.
+3. Inside the `OnPlayerDeath` function, we retrieve the player's current map and area IDs using `GetMapId()` and `GetAreaId()` methods.
+4. We check if the player is in the desired map (in this case, map 0) and specific area using the `AREA_ID` constant.
+5. If the player is in the correct map and area, we check if they have the specified title using the `HasTitle()` method.
+6. If the player has the title, we remove it using the `UnsetKnownTitle()` method and send a broadcast message to inform them about the title loss.
+
+This script ensures that players lose the specified title when they die in the designated area. You can customize the conditions and actions based on your specific requirements.
+
+Remember to replace `AREA_ID` and `TITLE_ID` with the actual IDs relevant to your game world and title system.
+
+Note: Make sure to have the necessary permissions and consider any potential balance implications when removing titles from players programmatically.
+
+## UpdateHonor
+Updates the player's weekly honor status, calculating their standing ranks and honor points for the current week.
+
+### Parameters
+None
+
+### Returns
+None
+
+### Example Usage
+This example script will update the player's weekly honor status when they kill an enemy player, and then reward them with additional honor points based on their standing rank.
+
+```typescript
+const KILL_HONOR_BONUS = 100;
+
+const OnPVPKill: player_event_on_kill_player = (event: number, killer: Player, killed: Player) => {
+    // Update the killer's weekly honor status
+    killer.UpdateHonor();
+
+    // Get the killer's current honor points and standing rank
+    const honorPoints = killer.GetHonorPoints();
+    const standingRank = killer.GetHonorStandingRank();
+
+    // Calculate the bonus honor points based on the standing rank
+    let bonusHonor = 0;
+    if (standingRank === 1) {
+        bonusHonor = KILL_HONOR_BONUS * 3;
+    } else if (standingRank <= 5) {
+        bonusHonor = KILL_HONOR_BONUS * 2;
+    } else if (standingRank <= 10) {
+        bonusHonor = KILL_HONOR_BONUS;
+    }
+
+    // Add the bonus honor points to the killer
+    if (bonusHonor > 0) {
+        killer.ModifyHonorPoints(bonusHonor);
+        killer.SendBroadcastMessage(`You have been awarded ${bonusHonor} bonus honor points for your outstanding performance!`);
+    }
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_KILL_PLAYER, (...args) => OnPVPKill(...args));
+```
+
+In this example:
+1. When a player kills another player, the `OnPVPKill` event is triggered.
+2. The script calls `UpdateHonor()` to update the killer's weekly honor status.
+3. It retrieves the killer's current honor points and standing rank using `GetHonorPoints()` and `GetHonorStandingRank()`.
+4. Based on the standing rank, it calculates the bonus honor points to be awarded.
+   - Rank 1 players receive a 3x bonus
+   - Ranks 2-5 players receive a 2x bonus
+   - Ranks 6-10 players receive a 1x bonus
+   - Players below rank 10 receive no bonus
+5. If bonus honor points are to be awarded, the script calls `ModifyHonorPoints()` to add the bonus to the killer's honor points.
+6. Finally, it sends a broadcast message to the killer informing them of the bonus honor points awarded.
+
+This script encourages players to strive for higher standing ranks by rewarding them with bonus honor points for kills, proportional to their current rank. It adds an extra layer of motivation and competition to the PvP system.
+
+## Whisper
+Sends a whisper message from the player to another player.
+
+### Parameters
+* text: string - The content of the whisper message
+* lang: number - The language of the message (can be found in Language.h)
+* receiver: [Player](./player.md) - The player to receive the whisper message
+* guid: number - The GUID of the receiver player
+
+### Example Usage:
+Script that allows a player to whisper another player with a specific keyword and receive an automated response.
+```typescript
+const KEYWORD = "help";
+const RESPONSE = "Sure, I can help you! What do you need assistance with?";
+const LANG_UNIVERSAL = 0;
+
+const HandleWhisper: player_event_on_whisper = (event: number, player: Player, msg: string, lang: Language, receiver: Player): void => {
+    if (msg.toLowerCase() === KEYWORD) {
+        const receiverGuid = receiver.GetGUID();
+        player.Whisper(RESPONSE, LANG_UNIVERSAL, receiver, receiverGuid);
+    }
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_WHISPER, (...args) => HandleWhisper(...args));
+```
+
+In this example:
+1. We define constants for the keyword that triggers the automated response, the response message itself, and the language of the message (in this case, Universal).
+2. We create a function `HandleWhisper` that handles the `PLAYER_EVENT_ON_WHISPER` event.
+3. Inside the function, we check if the received message (`msg`) matches the defined `KEYWORD`. The comparison is done in lowercase to make it case-insensitive.
+4. If the keyword matches, we retrieve the GUID of the receiver player using `receiver.GetGUID()`.
+5. We then use the `Whisper` method of the `player` object to send the `RESPONSE` message to the `receiver` player, specifying the language as `LANG_UNIVERSAL` and providing the receiver's GUID.
+6. Finally, we register the `HandleWhisper` function to be called whenever the `PLAYER_EVENT_ON_WHISPER` event occurs using `RegisterPlayerEvent`.
+
+With this script, whenever a player whispers the keyword "help" to another player, the script will automatically respond with the message "Sure, I can help you! What do you need assistance with?" in the Universal language.
+
+This example demonstrates how the `Whisper` method can be used in combination with player events to create interactive functionality based on player communication.
+
+## Yell
+Send a yell message from the player to nearby players.  These messages will appear in the chat window for other players that are nearby.  You can also specify a language to yell the text. 
+
+### Parameters
+* text: string - The text to send as the yell message
+* lang: [Language](../Enums/Language.md) - The language to send the text as 
+
+### Example Usage:
+Have the player yell when they die with the number of their lifetime kills
+
+```typescript
+const YELL_RANGE = 100;
+
+const OnPlayerDeath: player_event_on_player_kill = (event: number, killer: Player, killed: Player) => {
+    if(killer.GetGUID() == killed.GetGUID()) {
+        // Player killed themselves, don't yell
+        return;
+    }
+
+    // Get lifetime kills
+    const lifetimeKills = killed.GetUInt32Value(UnitFields.PLAYER_FIELD_LIFETIME_HONORABLE_KILLS);
+
+    // Create yell message with lifetime kills
+    const yellMessage = `I have been slain with ${lifetimeKills} lifetime kills!`;
+
+    // Yell in common language
+    killed.Yell(yellMessage, Language.LANG_UNIVERSAL);
+
+    // Get nearby players
+    const nearbyPlayers = killed.GetPlayersInRange(YELL_RANGE);
+
+    // Send a whisper to all nearby players with the same message
+    nearbyPlayers.forEach((player: Player) => {
+        if(player.GetGUID() != killed.GetGUID()) {
+            killed.Whisper(yellMessage, Language.LANG_UNIVERSAL, player);
+        }        
+    })
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_KILLED_BY_PLAYER, (...args) => OnPlayerDeath(...args));
+```
+
+In this example:
+1. When a player is killed by another player the `OnPlayerDeath` function will be called. 
+2. It will check if the killer and killed players are the same (suicide) and if so it will return early
+3. The players lifetime kills will be retrieved
+4. A yell message will be constructed with the lifetime kills included
+5. The `Yell` method will be called with the message and the `LANG_UNIVERSAL` language (common tongue)
+6. All players within `YELL_RANGE` of the killed player will be found
+7. A whisper will be sent from the killed player to each nearby player with the same message.
+
+This will allow you to broadcast a message not only to the nearby players, but also whisper that same message to them as well.
+

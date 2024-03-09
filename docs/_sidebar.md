@@ -5,10 +5,12 @@
     - Eluna Classes
         - [Aura](./classes/Aura.md)
         - [BattleGround](./classes/BattleGround.md)
+        - [Corpse](./classes/Corpse.md)
         - [Creature](./classes/Creature.md)
         - [GameObject](./classes/GameObject.md)
         - [Group](./classes/Group.md)
         - [Player](./classes/Player.md)
+        - [Unit](./classes/Unit.md)
     - Events        
     - Enums
     - Examples

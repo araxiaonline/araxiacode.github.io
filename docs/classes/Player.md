@@ -9483,3 +9483,37 @@ In this example:
 
 This ensures that the movie only plays once per character when they reach the required level and have completed the specified quest.
 
+## SendNotification
+Sends a notification message to the player's screen. This is useful for alerting the player of important information or events occurring. 
+
+### Parameters
+* message: string - The message to display to the player
+
+### Example Usage:  
+This example will send a notification to the player every time they kill a creature, with a special message if they have killed 50 creatures.
+```typescript
+let totalKills = 0;
+
+const KillTracker: player_event_on_kill_creature = (event: number, player: Player, creature: Creature) => {
+    totalKills++;
+
+    if (totalKills == 50) {
+        player.SendNotification(`Congratulations! You have killed ${totalKills} creatures. You are quite the hunter!`);
+    }
+    else {
+        player.SendNotification(`You have killed a ${creature.GetName()}. Total kills: ${totalKills}.`);
+    }
+}
+
+RegisterPlayerEvent(PlayerEvents.PLAYER_EVENT_ON_KILL_CREATURE, (...args) => KillTracker(...args));
+```
+
+In this example:
+1. We initialize a variable `totalKills` to keep track of the number of creatures the player has killed.
+2. We register a listener for the `PLAYER_EVENT_ON_KILL_CREATURE` event, which will trigger every time the player kills a creature.
+3. In the event handler, we increment `totalKills`.
+4. We then check if `totalKills` has reached 50. If so, we send a special congratulatory message to the player using `SendNotification`.
+5. If `totalKills` is not 50, we send a notification to the player informing them of the creature they just killed and their total kill count so far.
+
+This script provides the player with real-time feedback on their kills and offers a little extra recognition when they reach a milestone number of kills.
+

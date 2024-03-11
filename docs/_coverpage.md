@@ -1,6 +1,6 @@
 <!-- _coverpage.md -->
 
-![logo](media/logo.png)
+![logo](media/logo-revised.webp)
 # AraxiaCode <small>alpha</small>
 > Open Source Projects For World of Warcraft Private Servers
 

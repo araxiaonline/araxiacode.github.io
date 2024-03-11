@@ -2,7 +2,7 @@
 
 ![logo](media/logo-revised.webp)
 # AraxiaCode <small>alpha</small>
-> Open Source Projects For World of Warcraft Private Servers
+> Open Source Projects For World of Warcraft
 
 [GitHub](https://github.com/araxiaonline/)
 [Get Started](#about)

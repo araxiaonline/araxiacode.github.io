@@ -1,0 +1,17 @@
+{
+  "devDependencies": {
+    "@tsconfig/recommended": "^1.0.3",
+    "@types/node": "^20.11.25",
+    "@types/typescript": "^2.0.0",
+    "typescript": "^5.4.2",
+    "wow-eluna-ts-module": "^1.11.1"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.17.1",
+    "@types/commander": "^2.12.2",
+    "commander": "^12.0.0",
+    "dotenv": "^16.4.5",
+    "openai": "^4.28.4",
+    "ts-node": "^10.9.2"
+  }
+}

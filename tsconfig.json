@@ -1,0 +1,33 @@
+{
+    "compilerOptions": {
+      "strict": false,
+      "target": "esnext",
+      "outDir": "./dist",
+      "skipLibCheck": true,
+      "lib": [
+        "esnext"
+      ],
+      "moduleResolution": "node",
+      "types": [
+        "lua-types/5.2",
+        "@typescript-to-lua/language-extensions",
+        "wow-eluna-ts-module", 
+        "@araxiaonline/wow-wotlk-declarations", 
+        "node"   
+      ],
+      "rootDir": "."
+    },
+    "include": [
+      "src/**/*.ts",         
+     ],
+    "exclude": [
+      "node_modules",
+      "**/node_modules",
+      "test",
+      "**/*spec.ts",
+      "**/__tests__",
+      "**/__mocks__",    
+      "dist",
+      "development"
+    ]
+  }

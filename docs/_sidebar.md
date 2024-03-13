@@ -6,6 +6,7 @@
     - [VSCode Integration](./ets/VSCodeIntegration.md)
     - [Advanced Topics](./ets/AdvancedTopics.md)
     - Eluna Classes
+        - [Achievement](./classes/Achievement.md)
         - [Aura](./classes/Aura.md)
         - [BattleGround](./classes/BattleGround.md)
         - [Corpse](./classes/Corpse.md)
@@ -24,6 +25,7 @@
         - [WorldPacket](./classes/WorldPacket.md)
     - Events        
     - Enums
+        - [Eluna Specific](./enums/Common.md)
     - Examples
     - Release Notes 
 - WoW 3.3.5 Client Patcher

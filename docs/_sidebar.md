@@ -24,9 +24,11 @@
         - [Vehicle](./classes/Vehicle.md)
         - [WorldObject](./classes/WorldObject.md)
         - [WorldPacket](./classes/WorldPacket.md)
+    - WoW API 
+        - [Model](./wowapi/classes/Model.md)
     - Events        
     - Enums
-        - [Eluna Specific](./enums/Common.md)
+        - [Eluna](./enums/Common.md)
     - Examples
         - [AIO Slot Machine](./examples/aio.slotmachine.md)
     - Release Notes 

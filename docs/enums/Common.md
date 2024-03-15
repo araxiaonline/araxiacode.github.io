@@ -1,5 +1,6 @@
-## Eluna Enums
+## Enums
 This highlights the list of all available ids that are associated to an enum in Typescript.  These map to the underlying IDs in the core: 
+
 
 | Enum Name            | Value                      | Description                                   |
 |----------------------|----------------------------|-----------------------------------------------|

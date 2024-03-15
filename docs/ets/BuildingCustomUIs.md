@@ -68,7 +68,7 @@ module/
     └── module.functions.ts
 ```
 
-In order to use this functionality you use typical imports.  **This is only referencing client files, server files imports can be used however, as eluna supports "require" method call where the WoW Client does not. 
+If you want to use more shared code in your client UI, you can use import statements like below.  These will not be transpiled into requires, and instead will work similar to how C++ compilation works bring the code directly into the file at transpile time.  The transpiler plugin is smart enough to only every include the same function once into the name space so you can reuse the same libraries in multiple different UI modules without causing a name collision. 
 ```typescript
 // ---- File: module.client.ts
 // common import

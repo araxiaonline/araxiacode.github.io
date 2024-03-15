@@ -31,6 +31,7 @@
         - [Eluna](./enums/Common.md)
     - Examples
         - [AIO Slot Machine](./examples/aio.slotmachine.md)
+        - [AIO NPCBot Mgr](./examples/botmgr.client.md)
     - Release Notes 
 - WoW 3.3.5 Client Patcher
     - Getting Started

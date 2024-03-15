@@ -4,7 +4,8 @@
     - [Configuration](./ets/Configuration.md)
     - [Building Modules](./ets/Modules.md)
     - [VSCode Integration](./ets/VSCodeIntegration.md)
-    - [Advanced Topics](./ets/AdvancedTopics.md)
+    - Advanced Topics
+        - [Building Custom UIs](./ets/BuildingCustomUIs.md)
     - Eluna Classes
         - [Achievement](./classes/Achievement.md)
         - [Aura](./classes/Aura.md)

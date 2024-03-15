@@ -28,6 +28,7 @@
     - Enums
         - [Eluna Specific](./enums/Common.md)
     - Examples
+        - [AIO Slot Machine](./examples/aio.slotmachine.md)
     - Release Notes 
 - WoW 3.3.5 Client Patcher
     - Getting Started

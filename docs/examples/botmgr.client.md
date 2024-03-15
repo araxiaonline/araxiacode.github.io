@@ -5,7 +5,7 @@ to work mostly similar to the players.
 This is only one portion of the client code for to learn more advanced concepts from example. 
 
 __botmgr.client.ts__
-```typescrpt
+```typescirpt
 
 /** @noSelfInFile **/
 /** @ts-expect-error */

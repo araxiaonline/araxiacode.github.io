@@ -1,4 +1,4 @@
-## Slot Machine Example 
+### Slot Machine Example 
 This example demonstrates how to use AIO alongside the WoW API to build AIO UI elements into the client without requiring user patching or installing plugins. 
 
 **Server-side Script (aio.server.ts):**

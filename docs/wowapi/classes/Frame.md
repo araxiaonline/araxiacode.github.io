@@ -1119,3 +1119,105 @@ After unregistering the events, the Frame will no longer receive notifications f
 
 This is useful when you only want to handle certain events temporarily or conditionally, and want to optimize performance by not processing events that are no longer needed.
 
+## UnregisterAllEvents
+This method unregisters all events that the frame is currently monitoring. This is useful when you want to stop a frame from responding to any events it was previously registered for.
+
+### Parameters
+None
+
+### Returns
+None
+
+### Example Usage
+```typescript
+// Create a new frame
+const myFrame = CreateFrame("Frame", "MyFrame", UIParent);
+
+// Register some events
+myFrame.RegisterEvent("PLAYER_ENTERING_WORLD");
+myFrame.RegisterEvent("PLAYER_LEAVING_WORLD");
+myFrame.RegisterEvent("PLAYER_DEAD");
+
+// Set the event handler
+myFrame.SetScript("OnEvent", function(self, event, ...) {
+    if (event === "PLAYER_ENTERING_WORLD") {
+        print("Player entered the world");
+    } else if (event === "PLAYER_LEAVING_WORLD") {
+        print("Player left the world");
+    } else if (event === "PLAYER_DEAD") {
+        print("Player died");
+        
+        // If the player died, unregister all events
+        self.UnregisterAllEvents();
+        
+        // Show a message to the player
+        UIErrorsFrame.AddMessage("You have died. All events unregistered.", 1.0, 0.1, 0.1, 1.0);
+        
+        // Disable the frame
+        self.Disable();
+        
+        // Hide the frame
+        self.Hide();
+    }
+});
+```
+
+In this example, we create a new frame and register three events: `PLAYER_ENTERING_WORLD`, `PLAYER_LEAVING_WORLD`, and `PLAYER_DEAD`. We set the event handler to print a message when each event fires.
+
+If the `PLAYER_DEAD` event is triggered, we use `UnregisterAllEvents()` to stop the frame from responding to any further events. We also show an error message to the player, disable the frame, and hide it.
+
+This demonstrates how `UnregisterAllEvents()` can be used to clean up a frame's event registrations when they are no longer needed, such as when the player dies in this example.
+
+## SetBackdropColor
+This method applies a tint to the background component of a frame's backdrop. It allows you to customize the color and opacity of the backdrop, which can be useful for creating visual effects or highlighting certain elements in your addon's user interface.
+
+### Parameters
+- **red** (number): The red component of the tint color, ranging from 0 to 1.
+- **green** (number): The green component of the tint color, ranging from 0 to 1.
+- **blue** (number): The blue component of the tint color, ranging from 0 to 1.
+- **alpha** (number): The opacity of the backdrop's background, ranging from 0 (fully transparent) to 1 (fully opaque).
+
+### Returns
+None
+
+### Example Usage
+```typescript
+// Create a frame with a backdrop
+const myFrame = CreateFrame("Frame", "MyFrame", UIParent);
+myFrame.SetSize(200, 100);
+myFrame.SetPoint("CENTER");
+myFrame.SetBackdrop({
+    bgFile: "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile: "Interface\\DialogFrame\\UI-DialogBox-Border",
+    tile: true,
+    tileSize: 32,
+    edgeSize: 32,
+    insets: { left: 11, right: 12, top: 12, bottom: 11 },
+});
+
+// Set the backdrop color to a semi-transparent blue
+myFrame.SetBackdropColor(0, 0, 1, 0.5);
+
+// Create a button to toggle the backdrop color
+const toggleButton = CreateFrame("Button", "ToggleButton", myFrame, "UIPanelButtonTemplate");
+toggleButton.SetSize(100, 30);
+toggleButton.SetPoint("CENTER", myFrame, "CENTER", 0, -20);
+toggleButton.SetText("Toggle Color");
+
+let isRedBackdrop = false;
+toggleButton.SetScript("OnClick", () => {
+    if (isRedBackdrop) {
+        myFrame.SetBackdropColor(0, 0, 1, 0.5); // Set to semi-transparent blue
+    } else {
+        myFrame.SetBackdropColor(1, 0, 0, 0.5); // Set to semi-transparent red
+    }
+    isRedBackdrop = !isRedBackdrop;
+});
+```
+
+In this example, we create a frame (`myFrame`) with a backdrop using the `SetBackdrop` method. We then use `SetBackdropColor` to set the backdrop color to a semi-transparent blue.
+
+Next, we create a button (`toggleButton`) inside the frame. When the button is clicked, it toggles the backdrop color between semi-transparent blue and semi-transparent red using `SetBackdropColor`. The `isRedBackdrop` variable keeps track of the current color state.
+
+This example demonstrates how `SetBackdropColor` can be used to dynamically change the color and opacity of a frame's backdrop based on user interaction or other events in your addon.
+

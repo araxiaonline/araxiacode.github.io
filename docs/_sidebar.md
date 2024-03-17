@@ -26,6 +26,10 @@
         - [WorldPacket](./classes/WorldPacket.md)
     - WoW API 
         - [Model](./wowapi/classes/Model.md)
+        - [Frame](./wowapi/classes/Frame.md)
+        - [ObjectHookScript](./wowapi/classes/ObjectHookScript.md)
+        - [ObjestSetScript](./wowapi/classes/ObjectSetScript.md)
+        - [Texture](./wowapi/classes/Texture.md)
     - Events        
     - Enums
         - [Eluna](./enums/Common.md)

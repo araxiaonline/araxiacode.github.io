@@ -27,8 +27,8 @@
     - WoW API 
         - [Model](./wowapi/classes/Model.md)
         - [Frame](./wowapi/classes/Frame.md)
-        - [ObjectHooks](./wowapi/classes/HookScripts.md)
-        - [ObjestSetScript](./wowapi/classes/ObjectSetScript.md)
+        - [Event Hooks](./wowapi/classes/HookScripts.md)
+        - [Set Scripts](./wowapi/classes/ObjectSetScript.md)
         - [Texture](./wowapi/classes/Texture.md)
     - Events        
     - Enums

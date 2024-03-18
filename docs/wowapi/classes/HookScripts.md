@@ -128,9 +128,9 @@ In this example:
 
 When the button is clicked with the left mouse button, the script handler function will be executed, and the appropriate actions will be performed based on the button click and any modifier keys being held down.
 
-## HookScript
+## Hook - OnEnter & OnLeave
 
-Hooks a script handler to the specified event on the object.
+This hook handles when the cursor enters or leaves a region. 
 
 ### Parameters
 
@@ -195,11 +195,10 @@ In this example:
    - If the player's level is greater than or equal to 60, we disable the button using `button.Disable()` and print a message indicating that the player has reached the maximum level.
    - If the player's level is below 60, we print a message showing the player's current level.
 
-This example demonstrates how to hook script handlers to different events of a frame and perform actions based on those events, such as displaying tooltips and executing custom logic when the button is clicked.
 
-## HookScript
+## Hook - OnEvent
 
-The `HookScript` method is used to register a script handler for a specific event on a frame. This allows you to execute custom code when the specified event occurs on the frame.
+Generic handler that attaches to allow you to attach a handler to listen to any event fired on ths UIObject. 
 
 ### Parameters
 
@@ -265,11 +264,9 @@ In this example:
 7. We hook the `handleCombatLogEvent` function to the "OnEvent" event of the `combatLogFrame` using `combatLogFrame.HookScript("OnEvent", handleCombatLogEvent)`.
 8. We register the "COMBAT_LOG_EVENT_UNFILTERED" event using `combatLogFrame.RegisterEvent` to receive combat log events.
 
-This example demonstrates how to use the `HookScript` method to handle different types of events on custom frames and perform specific actions based on the event data.
+## Hook - OnHide & OnShow & OnLoad
 
-## HookScript
-
-The `HookScript` method is used to register a script handler for a specific event on a frame. It allows you to execute custom code when certain events occur, such as when a frame is shown, hidden, or loaded.
+Hook for handling common events for when a UIObject is shown, hidden, or initially loaded. 
 
 ### Parameters
 
@@ -334,13 +331,9 @@ In this example:
 
 5. In the `handleOnLoad` function, we print a message indicating that the frame is loaded and set its background color to blue. We also register the `"PLAYER_ENTERING_WORLD"` event and set up an event handler using `SetScript`. When the player enters the world, the frame will be shown.
 
-6. Finally, we create an instance of the `MyAddon` class to initialize the addon.
+## Hook - OnMouseDown & OnMouseUp
 
-This example demonstrates how to use `HookScript` to execute custom code when specific events occur on a frame, allowing you to add interactivity and dynamic behavior to your addon's UI elements.
-
-## HookScript
-
-Hooks a script handler to be called when a specific event happens.
+Hooks for mouse related events
 
 ### Parameters
 
@@ -406,9 +399,9 @@ In this example:
 
 Now, whenever the left or right mouse button is pressed or released on the frame, the corresponding event handler will be called, and the appropriate message will be printed.
 
-## HookScript
+## Hook - OnMouseWheel
 
-Hooks a script handler to a frame event.
+Handles when a mouse scroll is used with a UIObject
 
 ### Parameters
 
@@ -468,9 +461,9 @@ In this example:
 
 This example demonstrates how to hook the `"OnMouseWheel"` event to a frame and perform actions based on the scroll direction and magnitude. The scroll delta value is displayed on the frame using a font string, and the frame's opacity is adjusted accordingly.
 
-## HookScript
+## Hook - OnUpdate
 
-The `HookScript` method is used to register a script handler for a specific event on a frame. This allows you to execute custom code when certain events occur, such as when the frame is updated or when a button is clicked.
+Is called when a UIObject is redrawn into the UI. 
 
 ### Parameters
 
@@ -533,9 +526,9 @@ Finally, we create an instance of the `MyAddon` class to initialize the addon.
 
 This example demonstrates how to use the `HookScript` method to register a script handler for the `"OnUpdate"` event and perform frame updates based on the elapsed time.
 
-## HookScript
+## Hook - OnValueChanged & OnTextChange
 
-Hooks a script handler to a specified event for an ObjectHookScript object.
+Handles when a UIObject with a set value or text is updated. 
 
 ### Parameters
 
@@ -592,114 +585,4 @@ In this example:
 7. In the hooked script handler, we print the changed text and check if it matches a specific string.
 8. If the entered text is "secret", we print a message indicating that the secret word was entered.
 9. Finally, we create an instance of the `MyAddon` class to initialize the addon.
-
-This example demonstrates how to use the `HookScript` method to hook a script handler to the "OnTextChanged" event of an `EditBox` frame. The handler function is called whenever the text in the `EditBox` changes, allowing us to perform actions based on the changed value.
-
-## HookScript
-
-The `HookScript` method is used to register a script handler for a specific event on a frame. When the specified event occurs, the provided handler function will be called.
-
-### Parameters
-
-- **event** (string): The name of the event to hook the script to. In this case, it is `"OnTextChanged"`.
-- **handler** (function): The function to be called when the specified event occurs. It takes the following parameters:
-  - **frame** (T): The frame object on which the event occurred.
-  - **text** (string): The new text value of the frame.
-
-### Return Value
-
-None
-
-### Example Usage
-
-```typescript
-const inputFrame = CreateFrame("EditBox", "MyInputFrame", UIParent, "InputBoxTemplate");
-inputFrame.SetSize(200, 30);
-inputFrame.SetPoint("CENTER", UIParent, "CENTER", 0, 0);
-
-inputFrame.HookScript("OnTextChanged", (frame, text) => {
-  if (text.length > 10) {
-    print("Input text exceeds the maximum length of 10 characters.");
-    frame.SetText(text.substring(0, 10));
-  }
-
-  if (text.toLowerCase() === "hello") {
-    print("Greetings! You entered 'hello'.");
-  } else if (text.toLowerCase() === "goodbye") {
-    print("Farewell! You entered 'goodbye'.");
-  }
-
-  const reversedText = text.split("").reverse().join("");
-  print(`Reversed text: ${reversedText}`);
-
-  const characterCount = text.length;
-  print(`Character count: ${characterCount}`);
-});
-```
-
-In this example:
-
-1. We create an `EditBox` frame named `"MyInputFrame"` using the `CreateFrame` function.
-2. We set the size of the input frame to 200 pixels wide and 30 pixels high using the `SetSize` method.
-3. We position the input frame at the center of the screen using the `SetPoint` method.
-4. We use the `HookScript` method to register a script handler for the `"OnTextChanged"` event on the input frame.
-5. Inside the script handler function:
-   - We check if the length of the entered text exceeds 10 characters. If it does, we print a message and truncate the text to the first 10 characters using the `SetText` method.
-   - We check if the entered text is equal to "hello" (case-insensitive) and print a greeting message if it matches.
-   - We check if the entered text is equal to "goodbye" (case-insensitive) and print a farewell message if it matches.
-   - We reverse the entered text using string manipulation methods and print the reversed text.
-   - We count the number of characters in the entered text and print the character count.
-
-This example demonstrates how to use the `HookScript` method to respond to text changes in an input frame, perform various checks and manipulations on the entered text, and provide feedback based on the input.
-
-## HookScript
-The `HookScript` method is used to register a handler function to be called when a specific event occurs on the object.
-
-### Parameters
-- **event** (`Event.OnAny`): The event to hook the handler to. This can be any of the events defined in the `Event` enum.
-- **handler** (`(frame: T, ...args: any[]) => void`): The handler function to be called when the specified event occurs. The handler function receives the following parameters:
-  - **frame** (`T`): The frame object on which the event occurred.
-  - **...args** (`any[]`): Additional arguments passed by the event, if any.
-
-### Example Usage
-Here's an example of how to use the `HookScript` method to hook a handler function to the `OnShow` event of a frame:
-
-```typescript
-const myFrame = CreateFrame("Frame", "MyFrame", UIParent);
-
-myFrame.HookScript(Event.OnShow, (frame) => {
-  print(`${frame.GetName()} is now shown!`);
-
-  // Perform additional actions when the frame is shown
-  frame.SetSize(200, 100);
-  frame.SetPoint("CENTER", UIParent, "CENTER", 0, 0);
-
-  const titleText = frame.CreateFontString(frame.GetName() + "Title", "OVERLAY", "GameFontNormal");
-  titleText.SetPoint("TOP", frame, "TOP", 0, -10);
-  titleText.SetText("Welcome to MyFrame!");
-
-  const closeButton = CreateFrame("Button", frame.GetName() + "CloseButton", frame, "UIPanelCloseButton");
-  closeButton.SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, -5);
-  closeButton.HookScript(Event.OnClick, () => {
-    frame.Hide();
-  });
-});
-
-myFrame.Show();
-```
-
-In this example:
-1. We create a new frame named "MyFrame" using the `CreateFrame` function.
-2. We use the `HookScript` method to hook a handler function to the `OnShow` event of the frame.
-3. Inside the handler function, we perform the following actions:
-   - Print a message indicating that the frame is now shown.
-   - Set the size of the frame to 200x100 pixels using the `SetSize` method.
-   - Set the position of the frame to the center of the screen using the `SetPoint` method.
-   - Create a title text using the `CreateFontString` method and set its text to "Welcome to MyFrame!".
-   - Create a close button using the `CreateFrame` function with the "UIPanelCloseButton" template.
-   - Position the close button at the top-right corner of the frame using the `SetPoint` method.
-   - Hook a handler function to the `OnClick` event of the close button to hide the frame when clicked.
-4. Finally, we call the `Show` method to display the frame, which triggers the `OnShow` event and invokes the hooked handler function.
-
-This example demonstrates how to use the `HookScript` method to register event handlers and perform actions when specific events occur on a frame object.
 

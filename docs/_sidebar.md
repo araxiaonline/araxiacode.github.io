@@ -27,7 +27,7 @@
     - WoW API 
         - [Model](./wowapi/classes/Model.md)
         - [Frame](./wowapi/classes/Frame.md)
-        - [ObjectHookScript](./wowapi/classes/ObjectHookScript.md)
+        - [ObjectHooks](./wowapi/classes/HookScripts.md)
         - [ObjestSetScript](./wowapi/classes/ObjectSetScript.md)
         - [Texture](./wowapi/classes/Texture.md)
     - Events        

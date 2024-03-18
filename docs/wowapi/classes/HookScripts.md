@@ -1,4 +1,4 @@
-## HookScript
+## Hook Event List
 
 Hook Scripts attach to objects to enable scripts to respond to user actions
 
@@ -76,7 +76,7 @@ We also create a close button for the frame and hook the `OnClick` event to hide
 
 By using `HookScript`, we can securely attach script handlers to widget events and customize the behavior of our addon's UI elements based on specific events.
 
-## Hook - OnClick
+## OnClick
 This method is used to hook a script handler when the UIObject is clicked. 
 
 ### Parameters
@@ -128,7 +128,7 @@ In this example:
 
 When the button is clicked with the left mouse button, the script handler function will be executed, and the appropriate actions will be performed based on the button click and any modifier keys being held down.
 
-## Hook - OnEnter & OnLeave
+## OnEnter & OnLeave
 
 This hook handles when the cursor enters or leaves a region. 
 
@@ -196,7 +196,7 @@ In this example:
    - If the player's level is below 60, we print a message showing the player's current level.
 
 
-## Hook - OnEvent
+## OnEvent
 
 Generic handler that attaches to allow you to attach a handler to listen to any event fired on ths UIObject. 
 
@@ -264,7 +264,7 @@ In this example:
 7. We hook the `handleCombatLogEvent` function to the "OnEvent" event of the `combatLogFrame` using `combatLogFrame.HookScript("OnEvent", handleCombatLogEvent)`.
 8. We register the "COMBAT_LOG_EVENT_UNFILTERED" event using `combatLogFrame.RegisterEvent` to receive combat log events.
 
-## Hook - OnHide & OnShow & OnLoad
+## OnHide & OnShow & OnLoad
 
 Hook for handling common events for when a UIObject is shown, hidden, or initially loaded. 
 
@@ -331,7 +331,7 @@ In this example:
 
 5. In the `handleOnLoad` function, we print a message indicating that the frame is loaded and set its background color to blue. We also register the `"PLAYER_ENTERING_WORLD"` event and set up an event handler using `SetScript`. When the player enters the world, the frame will be shown.
 
-## Hook - OnMouseDown & OnMouseUp
+## OnMouseDown & OnMouseUp
 
 Hooks for mouse related events
 
@@ -399,7 +399,7 @@ In this example:
 
 Now, whenever the left or right mouse button is pressed or released on the frame, the corresponding event handler will be called, and the appropriate message will be printed.
 
-## Hook - OnMouseWheel
+## OnMouseWheel
 
 Handles when a mouse scroll is used with a UIObject
 
@@ -461,7 +461,7 @@ In this example:
 
 This example demonstrates how to hook the `"OnMouseWheel"` event to a frame and perform actions based on the scroll direction and magnitude. The scroll delta value is displayed on the frame using a font string, and the frame's opacity is adjusted accordingly.
 
-## Hook - OnUpdate
+## OnUpdate
 
 Is called when a UIObject is redrawn into the UI. 
 
@@ -526,7 +526,7 @@ Finally, we create an instance of the `MyAddon` class to initialize the addon.
 
 This example demonstrates how to use the `HookScript` method to register a script handler for the `"OnUpdate"` event and perform frame updates based on the elapsed time.
 
-## Hook - OnValueChanged & OnTextChange
+## OnValueChanged & OnTextChange
 
 Handles when a UIObject with a set value or text is updated. 
 

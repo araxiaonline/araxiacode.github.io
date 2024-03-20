@@ -265,7 +265,9 @@ In this example:
 7. We hook the `handleCombatLogEvent` function to the "OnEvent" event of the `combatLogFrame` using `combatLogFrame.HookScript("OnEvent", handleCombatLogEvent)`.
 8. We register the "COMBAT_LOG_EVENT_UNFILTERED" event using `combatLogFrame.RegisterEvent` to receive combat log events.
 
-## OnHide & OnShow & OnLoad
+## OnHide 
+## OnShow 
+## OnLoad
 
 Hook for handling common events for when a UIObject is shown, hidden, or initially loaded. 
 
@@ -332,7 +334,8 @@ In this example:
 
 5. In the `handleOnLoad` function, we print a message indicating that the frame is loaded and set its background color to blue. We also register the `"PLAYER_ENTERING_WORLD"` event and set up an event handler using `SetScript`. When the player enters the world, the frame will be shown.
 
-## OnMouseDown & OnMouseUp
+## OnMouseDown
+## OnMouseUp
 
 Hooks for mouse related events
 
@@ -527,7 +530,8 @@ Finally, we create an instance of the `MyAddon` class to initialize the addon.
 
 This example demonstrates how to use the `HookScript` method to register a script handler for the `"OnUpdate"` event and perform frame updates based on the elapsed time.
 
-## OnValueChanged & OnTextChange
+## OnValueChanged
+## OnTextChange
 
 Handles when a UIObject with a set value or text is updated. 
 

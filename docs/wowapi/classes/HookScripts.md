@@ -1,8 +1,8 @@
-## Hook Event List
+## All Events
 
 Hook Scripts attach to objects to enable scripts to respond to user actions
 
-### Complete Events List 
+### Common Events List 
 The following events are built in as declarations: 
 
 - OnShow
@@ -16,7 +16,7 @@ The following events are built in as declarations:
 - OnValueChanged
 - OnTextChanged
 
-All other events can be used and referenced here: [Script Type events](https://warcraft.wiki.gg/wiki/Widget_script_handlers)
+All events can be used and referenced here: [Script Type events](https://warcraft.wiki.gg/wiki/Widget_script_handlers)
 
 ### Example Usage
 

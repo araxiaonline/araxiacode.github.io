@@ -128,7 +128,8 @@ In this example:
 
 When the button is clicked with the left mouse button, the script handler function will be executed, and the appropriate actions will be performed based on the button click and any modifier keys being held down.
 
-## OnEnter & OnLeave
+## OnEnter 
+## OnLeave
 
 This hook handles when the cursor enters or leaves a region. 
 

@@ -1,4 +1,4 @@
-## Enums
+### Constants
 This highlights the list of all available ids that are associated to an enum in Typescript.  These map to the underlying IDs in the core: 
 
 

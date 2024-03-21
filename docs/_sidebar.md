@@ -6,36 +6,37 @@
     - [VSCode Integration](./ets/VSCodeIntegration.md)
     - Advanced Topics
         - [Building Custom UIs](./ets/BuildingCustomUIs.md)
-    - Eluna Classes
-        - [Achievement](./classes/Achievement.md)
-        - [Aura](./classes/Aura.md)
-        - [BattleGround](./classes/BattleGround.md)
-        - [Corpse](./classes/Corpse.md)
-        - [Creature](./classes/Creature.md)
-        - [Map](./classes/EMap.md)
-        - [GameObject](./classes/GameObject.md)
-        - [Group](./classes/Group.md)
-        - [Item](./classes/Item.md)
-        - [Object](./classes/EObject.md)
-        - [Player](./classes/Player.md)
-        - [Quest](./classes/Quest.md)
-        - [Spell](./classes/Spell.md)
-        - [Unit](./classes/Unit.md)
-        - [Vehicle](./classes/Vehicle.md)
-        - [WorldObject](./classes/WorldObject.md)
-        - [WorldPacket](./classes/WorldPacket.md)
+    - Eluna 
+        - Objects
+            - [Achievement](./classes/Achievement.md)
+            - [Aura](./classes/Aura.md)
+            - [BattleGround](./classes/BattleGround.md)
+            - [Corpse](./classes/Corpse.md)
+            - [Creature](./classes/Creature.md)
+            - [Map](./classes/EMap.md)
+            - [GameObject](./classes/GameObject.md)
+            - [Group](./classes/Group.md)
+            - [Item](./classes/Item.md)
+            - [Object](./classes/EObject.md)
+            - [Player](./classes/Player.md)
+            - [Quest](./classes/Quest.md)
+            - [Spell](./classes/Spell.md)
+            - [Unit](./classes/Unit.md)
+            - [Vehicle](./classes/Vehicle.md)
+            - [WorldObject](./classes/WorldObject.md)
+            - [WorldPacket](./classes/WorldPacket.md)
+    - [Constants](./enums/Common.md)
     - WoW API 
-        - [Model](./wowapi/classes/Model.md)
-        - [Frame](./wowapi/classes/Frame.md)
-        - [Event Hooks](./wowapi/classes/HookScripts.md)
-        - [Set Scripts](./wowapi/classes/ObjectSetScript.md)
-        - [Texture](./wowapi/classes/Texture.md)
-    - Events        
-    - Enums
-        - [Eluna](./enums/Common.md)
-    - Examples
-        - [AIO Slot Machine](./examples/aio.slotmachine.md)
-        - [AIO NPCBot Mgr](./examples/botmgr.client.md)
+        - Objects
+            - [Model](./wowapi/classes/Model.md)
+            - [Frame](./wowapi/classes/Frame.md)
+            - [SetScript](./wowapi/classes/ObjectSetScript.md)
+            - [Texture](./wowapi/classes/Texture.md)
+        - [Inventory](./wowapi/functions/Inventory.md)
+        - [Events](./wowapi/classes/HookScripts.md)
+        - Examples
+            - [AIO Slot Machine](./examples/aio.slotmachine.md)
+            - [AIO NPCBot Mgr](./examples/botmgr.client.md)
     - Release Notes 
 - WoW 3.3.5 Client Patcher
     - Getting Started

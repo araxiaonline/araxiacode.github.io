@@ -40,10 +40,8 @@
     - Release Notes 
 - WoW 3.3.5 Client Patcher
     - Getting Started
-    - Configuration
     - Deploying Patches
     - File hosting
-- Guides
-    - Coming soon. 
-- Developer Articles
+- Useful SQL 
+    - [Creatures](./useful-sql/creatures.sql
 
